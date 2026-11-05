@@ -1,0 +1,146 @@
+{
+  "symbols": [
+    "BTCUSDT",
+    "SOLUSDT"
+  ],
+  "category": "linear",
+  "api_base": "https://api.bybit.com",
+  "timezone": "Europe/Berlin",
+  "account": {
+    "start_balance": 100.0,
+    "risk_pct": 5.0,
+    "max_leverage": 50,
+    "kelly_sizing": false,
+    "kelly_fraction": 0.5,
+    "kelly_min_trades": 20,
+    "kelly_max_risk_pct": 10.0
+  },
+  "fees": {
+    "maker": 0.0002,
+    "taker": 0.00055,
+    "include_funding": true
+  },
+  "instruments": {
+    "BTCUSDT": {
+      "qty_step": 0.001,
+      "min_qty": 0.001,
+      "min_notional": 5.0,
+      "tick": 0.1
+    },
+    "SOLUSDT": {
+      "qty_step": 0.1,
+      "min_qty": 0.1,
+      "min_notional": 5.0,
+      "tick": 0.01
+    }
+  },
+  "strategy": {
+    "zone_lookback": 120,
+    "zone_pivot": 2,
+    "zone_max_width_atr": 0.6,
+    "zone_min_width_atr": 0.08,
+    "zone_min_touches": 2,
+    "zone_min_gap_atr": 0.8,
+    "zone_max_cross": 6,
+    "range_min_bars": 4,
+    "swing_pivot": 2,
+    "pullback_bars": 3,
+    "fib_entry": 0.618,
+    "fib_deep": 0.722,
+    "invalidate": "close",
+    "setup_max_bars": 192,
+    "sl_buffer_atr": 0.1,
+    "trail_pivot": 2,
+    "star_ratio": 2.0,
+    "min_sl_pct": 0.15,
+    "max_sl_pct": 6.0
+  },
+  "optimizer": {
+    "days": 365,
+    "combos": 120,
+    "train_frac": 0.7,
+    "min_trades": 30,
+    "workers": 0,
+    "space": {
+      "zone_lookback": [
+        60,
+        90,
+        120,
+        180,
+        240
+      ],
+      "zone_pivot": [
+        2,
+        3
+      ],
+      "zone_max_width_atr": [
+        0.4,
+        0.6,
+        0.8
+      ],
+      "zone_min_gap_atr": [
+        0.5,
+        0.8,
+        1.2
+      ],
+      "zone_max_cross": [
+        4,
+        6,
+        10
+      ],
+      "range_min_bars": [
+        1,
+        4,
+        8
+      ],
+      "swing_pivot": [
+        1,
+        2,
+        3
+      ],
+      "invalidate": [
+        "close",
+        "touch"
+      ],
+      "setup_max_bars": [
+        96,
+        192,
+        384
+      ],
+      "sl_buffer_atr": [
+        0.05,
+        0.1,
+        0.2
+      ],
+      "trail_pivot": [
+        1,
+        2,
+        3
+      ],
+      "star_ratio": [
+        1.5,
+        2.0,
+        2.5
+      ],
+      "min_sl_pct": [
+        0.1,
+        0.15,
+        0.25
+      ]
+    }
+  },
+  "web": {
+    "port": 8756,
+    "host": "0.0.0.0",
+    "password": ""
+  },
+  "discord": {
+    "BTCUSDT": "",
+    "SOLUSDT": "",
+    "errors": "",
+    "notify_start": true
+  },
+  "backtest": {
+    "default_days": 365
+  }
+}

@@ -134,6 +134,25 @@ Setups with a stop tighter than `min_sl_pct` (fees would dominate) or wider than
 * Tested: running the engine on truncated data reproduces exactly the same trades up to the cut.
 * The paper trader ignores signals it sees more than 120 s after the candle closed (e.g. after a reboot).
 
+## Strategy Lab (interpretation switches)
+Every ambiguous rule has named variants. The defaults are the v1.0 behaviour, so nothing changes until you apply something.
+| switch | variants |
+|---|---|
+| `zone_method` | `pivots` (4h swing wicks clustered) · `wick_density` (band where the most 4h wicks react) |
+| `anchor_mode` ("the low") | `pivot` (last confirmed 15m swing low) · `leg_low` (lowest low of the breakout leg) · `range_low` (lowest low of the A-B range) |
+| `pullback_mode` | `strict` (red, each close lower) · `color` (red only) · `lower_highs` (lower highs + lows, colour ignored) |
+| `entry_window` | `after_touch` (engulfing anywhere after the 61.8 % touch) · `in_band` (engulfing must be in the 61.8-72.2 band) |
+| `engulf_mode` | `body` · `close_beyond` (body engulfs and closes beyond the previous wick) |
+| `exit_mode` | `trail` · `trail_zone_tp` (+ limit take-profit at the next zone C, maker fee) · `trail_rr_tp` (+ fixed `tp_r` target) |
+| `invalidate` | `close` · `touch` |
+
+Plus every number (`pullback_bars`, `fib_entry`, `fib_deep`, `trail_pivot` 0 = every candle, ...).
+On the website (section **08 LAB**) pick variants, run them on the backtest period, and compare the runs
+(R after fees, first half vs second half, BTC vs SOL). **VIEW** opens a run in the backtest view,
+**EDIT** loads it back into the form, and **APPLY** sends it to the live paper trader, which rebuilds itself
+and keeps open positions. The optimizer can also search the variants ("parameters + interpretation variants").
+Backtests fall back to the cached candles if Bybit is briefly unreachable.
+
 ## Optimizer
 Random search over `optimizer.space` (all parameters above). Each combination runs on both
 instruments with fees and funding. It ranks by **net R on the first 70 %** of the period and

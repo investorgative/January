@@ -34,7 +34,7 @@ except ImportError:  # pragma: no cover
 import numpy as np
 import requests
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 LOG_DIR = os.path.join(DATA_DIR, "logs")
@@ -88,6 +88,14 @@ DEFAULT_CONFIG = {
         "star_ratio": 2.0,          # hammer / shooting star: wick >= ratio * body
         "min_sl_pct": 0.15,         # skip setups with SL tighter than this (fees would dominate)
         "max_sl_pct": 6.0,
+        # ---- interpretation switches (Strategy Lab). Defaults = original v1.0 behaviour.
+        "zone_method": "pivots",      # pivots | wick_density
+        "anchor_mode": "pivot",       # pivot | leg_low | range_low
+        "pullback_mode": "strict",    # strict | color | lower_highs
+        "entry_window": "after_touch",# after_touch | in_band
+        "engulf_mode": "body",        # body | close_beyond
+        "exit_mode": "trail",         # trail | trail_zone_tp | trail_rr_tp
+        "tp_r": 3.0,                  # target for trail_rr_tp
     },
     "optimizer": {
         "days": 365,
@@ -110,6 +118,15 @@ DEFAULT_CONFIG = {
             "star_ratio": [1.5, 2.0, 2.5],
             "min_sl_pct": [0.1, 0.15, 0.25],
         },
+        "lab_space": {
+            "zone_method": ["pivots", "wick_density"],
+            "anchor_mode": ["pivot", "leg_low", "range_low"],
+            "pullback_mode": ["strict", "color", "lower_highs"],
+            "entry_window": ["after_touch", "in_band"],
+            "engulf_mode": ["body", "close_beyond"],
+            "exit_mode": ["trail", "trail_zone_tp", "trail_rr_tp"],
+        },
+        "include_lab_space": False,
     },
     "web": {"port": 8756, "host": "0.0.0.0", "password": ""},
     "discord": {
@@ -125,7 +142,7 @@ DEFAULT_CONFIG = {
 def deep_merge(base, over):
     out = copy.deepcopy(base)
     for k, v in (over or {}).items():
-        if isinstance(v, dict) and isinstance(out.get(k), dict) and k != "space":
+        if isinstance(v, dict) and isinstance(out.get(k), dict) and k not in ("space", "lab_space"):
             out[k] = deep_merge(out[k], v)
         else:
             out[k] = copy.deepcopy(v)
@@ -509,6 +526,8 @@ def find_zones(bars, p):
     pts.sort(key=lambda x: x[0])
     maxw = p["zone_max_width_atr"] * atr
     minw = p["zone_min_width_atr"] * atr
+    if p.get("zone_method", "pivots") == "wick_density":
+        return _zones_density(o, h, l, c, pts, atr, p)
     clusters, cur = [], [pts[0]]
     for q in pts[1:]:
         if q[0] - cur[0][0] <= maxw:
@@ -550,6 +569,50 @@ def find_zones(bars, p):
     for z in acc:
         z.pop("score", None)
         z.pop("last", None)
+    return acc
+
+
+def _zones_density(o, h, l, c, pts, atr, p):
+    """'as many wicks as possible touch the area': for every pivot extreme try a band of max width
+    that contains it, count all 4h WICKS that poke into the band and close outside of it
+    (rejections), tighten the band to the touching wick extremes, keep the best non-overlapping bands."""
+    n = len(h)
+    maxw = p["zone_max_width_atr"] * atr
+    minw = p["zone_min_width_atr"] * atr
+    cands = []
+    for x, _, kind, j in pts:
+        for lo_, hi_ in ((x - maxw, x), (x - maxw / 2, x + maxw / 2), (x, x + maxw)):
+            ext, idxs = [], set()
+            for i in range(n):
+                if l[i] <= hi_ and h[i] >= lo_:
+                    if c[i] > hi_ or c[i] < lo_:  # wick into the band, close outside = reaction
+                        e = l[i] if c[i] > hi_ else h[i]
+                        e = min(max(e, lo_), hi_)
+                        ext.append(e)
+                        idxs.add(i)
+            if len(idxs) < p["zone_min_touches"]:
+                continue
+            bot, top = min(ext), max(ext)
+            if top - bot < minw:
+                mid = (top + bot) / 2
+                bot, top = mid - minw / 2, mid + minw / 2
+            crosses = sum(1 for i in range(1, n) if (c[i - 1] < bot and c[i] > top) or (c[i - 1] > top and c[i] < bot))
+            if crosses > p["zone_max_cross"]:
+                continue
+            piv = sum(1 for q in pts if bot <= q[0] <= top)
+            if piv < 1:
+                continue
+            cands.append({"bot": float(bot), "top": float(top), "pivots": piv, "touches": len(idxs),
+                          "kind": kind, "score": len(idxs) + piv * 2 + max(idxs) / n})
+    cands.sort(key=lambda z: -z["score"])
+    gap = p["zone_min_gap_atr"] * atr
+    acc = []
+    for z in cands:
+        if all(z["bot"] - a["top"] >= gap or a["bot"] - z["top"] >= gap for a in acc):
+            acc.append(z)
+    acc.sort(key=lambda z: z["bot"])
+    for z in acc:
+        z.pop("score", None)
     return acc
 
 
@@ -725,7 +788,13 @@ class Engine:
             shape = candle_shape(o, h, l, c, p["star_ratio"])
             bad = "star" if d == 1 else "hammer"
             prev_c = self.C(a - 1)
-            clear = (c < o and c < prev_c) if d == 1 else (c > o and c > prev_c)
+            pm = p.get("pullback_mode", "strict")
+            if pm == "color":
+                clear = (c < o) if d == 1 else (c > o)
+            elif pm == "lower_highs":
+                clear = (h < self.H(a - 1) and l < self.L(a - 1)) if d == 1 else (l > self.L(a - 1) and h > self.H(a - 1))
+            else:
+                clear = (c < o and c < prev_c) if d == 1 else (c > o and c > prev_c)
             if a == s["ext_a"]:
                 clear = clear and False  # the candle that made the extreme is not a pullback candle
             if clear and shape != bad:
@@ -769,10 +838,18 @@ class Engine:
             po, pc = self.O(a - 1), self.C(a - 1)
             ph, pl = self.H(a - 1), self.L(a - 1)
             prev_shape = candle_shape(po, ph, pl, pc, p["star_ratio"])
+            em = p.get("engulf_mode", "body")
             if d == 1:
                 eng = c > o and pc < po and o <= pc and c >= po and (c - o) > (po - pc)
+                if em == "close_beyond":
+                    eng = eng and c > ph
             else:
                 eng = c < o and pc > po and o >= pc and c <= po and (o - c) > (pc - po)
+                if em == "close_beyond":
+                    eng = eng and c < pl
+            if eng and p.get("entry_window", "after_touch") == "in_band":
+                eng = (min(l, pl) <= s["fib"]) if d == 1 else (max(h, ph) >= s["fib"])
+                eng = eng and ((c > s["deep"]) if d == 1 else (c < s["deep"]))
             if eng and prev_shape == "":
                 sl = self._stop_price(s)
                 dist = abs(c - sl) / c * 100
@@ -782,7 +859,7 @@ class Engine:
                 if dist < p["min_sl_pct"] or dist > p["max_sl_pct"]:
                     self.last_status = f"engulfing found but SL {dist:.2f}% outside limits - still waiting"
                     return
-                self.pending = {"dir": d, "sl": sl, "signal_ts": self.ts[-1], "anchor": s["L"],
+                self.pending = {"dir": d, "sl": sl, "signal_ts": self.ts[-1], "anchor": s["L"], "next": s.get("next"),
                                 "ext": s["ext"], "ext_a": s["ext_a"], "zone": s["zone"],
                                 "fib": s["fib"], "deep": s["deep"]}
                 self.events.append({"type": "signal", "sym": self.sym, "ts": self.ts[-1], "dir": d, "sl": sl})
@@ -837,6 +914,13 @@ class Engine:
         else:
             anchors = self._pivot_highs_before(a, k)
             anchors = [j for j in anchors if self.H(j) > self.C(a)]
+        am = self.p.get("anchor_mode", "pivot")
+        if am != "pivot":
+            j0 = self._special_anchor(a, d, am, bo)
+            if j0 is not None:
+                v0 = self.L(j0) if d == 1 else self.H(j0)
+                rest = [j for j in anchors if (self.L(j) < v0 if d == 1 else self.H(j) > v0)]
+                anchors = [j0] + rest
         if not anchors:
             self.last_status = "breakout without a usable swing point"
             return None
@@ -854,6 +938,32 @@ class Engine:
                             "zone": [bo["zone"]["bot"], bo["zone"]["top"]]})
         self.last_status = f"BREAKOUT {'up' if d == 1 else 'down'} - waiting for pullback"
         return s
+
+    def _special_anchor(self, a, d, mode, bo):
+        """leg_low: extreme since the last swing point against the move (start of the breakout leg).
+        range_low: extreme of the whole A-B range stretch before the breakout."""
+        lim = max(self.off + 1, a - 400)
+        if mode == "leg_low":
+            k = max(1, int(self.p["swing_pivot"]))
+            opp = self._pivot_highs_before(a, k) if d == 1 else self._pivot_lows_before(a, k)
+            j_start = opp[0] if opp else max(lim, a - 96)
+            rng = range(max(j_start, lim), a + 1)
+        else:
+            z = bo["zone"]
+            j = a - 1
+            while j >= lim and z["bot"] <= self.C(j) <= z["top"]:
+                j -= 1
+            j_end = j
+            while j >= lim and ((self.C(j) < z["bot"]) if d == 1 else (self.C(j) > z["top"])):
+                j -= 1
+                if a - j > 400:
+                    break
+            rng = range(max(j + 1, lim), a + 1)
+        if not len(rng):
+            return None
+        if d == 1:
+            return min(rng, key=lambda x: self.L(x))
+        return max(rng, key=lambda x: self.H(x))
 
     def _levels(self, s):
         j = s["anchors"][s["anc_k"]]
@@ -907,7 +1017,15 @@ class Engine:
                     "sl0": float(pend["sl"]), "anchor": pend["anchor"], "signal_ts": pend["signal_ts"],
                     "struct": float(pend["ext"]), "struct_ts": int(self.ts[self._i(pend["ext_a"])]) if self._i(pend["ext_a"]) >= 0 else int(t),
                     "struct_a": pend["ext_a"], "last_break_a": None, "trail": [], "funding": [],
-                    "zone": pend["zone"], "fib": pend["fib"], "mfe": 0.0, "mae": 0.0}
+                    "zone": pend["zone"], "fib": pend["fib"], "mfe": 0.0, "mae": 0.0, "tp": None}
+        em = self.p.get("exit_mode", "trail")
+        if em == "trail_zone_tp" and pend.get("next"):
+            nz = pend["next"]
+            tp = nz["bot"] if d == 1 else nz["top"]
+            if (d == 1 and tp > price) or (d == -1 and tp < price):
+                self.pos["tp"] = float(tp)
+        elif em == "trail_rr_tp":
+            self.pos["tp"] = float(price + d * self.p.get("tp_r", 3.0) * abs(price - pend["sl"]))
         self.events.append({"type": "open", "sym": self.sym, "ts": int(t), "pos": copy.deepcopy(self.pos)})
 
     def fill_pending_now(self, t, price):
@@ -927,9 +1045,15 @@ class Engine:
         if risk > 0:
             ps["mfe"] = max(ps["mfe"], ((h - ps["entry"]) if d == 1 else (ps["entry"] - l)) / risk)
             ps["mae"] = min(ps["mae"], ((l - ps["entry"]) if d == 1 else (ps["entry"] - h)) / risk)
-        if hit:
+        if hit:  # stop first if stop and target are both inside the bar (worst case)
             px = min(o, ps["sl"]) if d == 1 else max(o, ps["sl"])  # gap through the stop fills at the open
             self.close(t, px, "trail stop" if ps["trail"] else "stop loss")
+            return
+        tp = ps.get("tp")
+        if tp and ((d == 1 and h >= tp) or (d == -1 and l <= tp)):
+            px = max(o, tp) if d == 1 else min(o, tp)  # resting limit: fills at the target or better
+            ps["exit_maker"] = True
+            self.close(t, px, "take profit")
 
     def close(self, t, price, reason):
         ps = self.pos
@@ -1019,7 +1143,7 @@ class Engine:
                            "deep": s.get("deep"), "bars_left": p["setup_max_bars"] - (self.off + len(self.c) - 1 - s["bo_a"])}
         if self.pos is not None:
             ps = self.pos
-            st["position"] = {k: ps[k] for k in ("dir", "entry", "entry_ts", "sl", "sl0", "struct", "trail")}
+            st["position"] = {k: ps.get(k) for k in ("dir", "entry", "entry_ts", "sl", "sl0", "struct", "trail", "tp")}
         return st
 
     # ---- persistence of an open position (paper trader)
@@ -1100,7 +1224,8 @@ def trade_record(ps):
             "entry_ts": ps["entry_ts"], "entry": ps["entry"], "sl0": ps["sl0"], "sl": ps["sl"],
             "exit_ts": ps.get("exit_ts"), "exit": ps.get("exit"), "reason": ps.get("reason"),
             "trail": ps.get("trail", []), "funding": ps.get("funding", []), "signal_ts": ps.get("signal_ts"),
-            "mfe": ps.get("mfe", 0.0), "mae": ps.get("mae", 0.0)}
+            "mfe": ps.get("mfe", 0.0), "mae": ps.get("mae", 0.0), "tp": ps.get("tp"),
+            "exit_maker": bool(ps.get("exit_maker"))}
 
 
 def unit_r(t, fees):
@@ -1113,7 +1238,7 @@ def unit_r(t, fees):
         return 0.0
     ex = t["exit"]
     gross = d * (ex - t["entry"])
-    fee = tk * (t["entry"] + ex)
+    fee = tk * t["entry"] + (fees.get("maker", tk) if t.get("exit_maker") else tk) * ex
     fund = sum(d * r * px for _, r, px in t.get("funding", [])) if fees.get("include_funding", True) else 0.0
     return (gross - fee - fund) / risk_unit
 
@@ -1174,7 +1299,7 @@ def replay(trades, cfg, settings, symbols, open_positions=None, marks=None, star
             q = sz["qty"]
             d = rec["dir"]
             gross = d * (rec["exit"] - rec["entry"]) * q
-            fee = tk * (rec["entry"] + rec["exit"]) * q
+            fee = (tk * rec["entry"] + (fees.get("maker", tk) if rec.get("exit_maker") else tk) * rec["exit"]) * q
             fund = sum(d * r * px for _, r, px in rec.get("funding", [])) * q if fees.get("include_funding", True) else 0.0
             pnl = gross - fee - fund
             bal += pnl

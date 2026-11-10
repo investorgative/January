@@ -183,9 +183,16 @@ class Trader:
                 if eng and eng.pos:
                     ps = eng.pos
                     hit = last <= ps["sl"] if ps["dir"] == 1 else last >= ps["sl"]
+                    tp = ps.get("tp")
+                    tp_hit = bool(tp) and (last >= tp if ps["dir"] == 1 else last <= tp)
                     if hit and core.now_ms() >= ps["entry_ts"]:
                         eng.events = []
                         eng.close(core.now_ms(), ps["sl"], "trail stop" if ps["trail"] else "stop loss")
+                        self.handle(sym, eng.events)
+                    elif tp_hit and core.now_ms() >= ps["entry_ts"]:
+                        eng.events = []
+                        ps["exit_maker"] = True
+                        eng.close(core.now_ms(), tp, "take profit")
                         self.handle(sym, eng.events)
             except Exception:
                 self.log.exception(f"{sym}: ticker poll failed")

@@ -44,16 +44,25 @@ def load_data(cfg, days, params, progress=None, max_lookback=None):
         def pr(x, n=n):
             if progress:
                 progress("download " + sym, (n + x) / len(syms) * 0.5)
-        store.ensure(sym, data_start, end, progress=pr)
+        try:
+            store.ensure(sym, data_start, end, progress=pr)
+        except Exception as e:  # Bybit unreachable: use what is cached, never block a backtest
+            core.logging.getLogger("january").warning(f"{sym}: download failed, using cached candles ({e})")
         d = store.load(sym, data_start, end)
+        if not len(d["ts"]):
+            raise RuntimeError(f"no candles for {sym} (no cache and Bybit unreachable)")
         fund = {}
         if cfg["fees"].get("include_funding", True):
             try:
                 store.ensure_funding(sym, data_start, end)
-                fund = store.load_funding(sym, data_start, end)
             except Exception as e:  # funding is optional, never block a backtest
                 core.logging.getLogger("january").warning(f"funding download failed {sym}: {e}")
+            fund = store.load_funding(sym, data_start, end)
         out[sym] = {"data": d, "funding": fund}
+    last = min(int(v["data"]["ts"][-1]) for v in out.values()) + core.M15 - 1
+    if last < end:  # cached data ends earlier -> shift the window so every symbol has data
+        end = last
+        start = end - int(days * core.DAY)
     return out, start, end
 
 
@@ -79,11 +88,35 @@ def run_backtest(cfg, days, settings, params=None, progress=None):
     for name, ss in core.ACCOUNTS.items():
         accounts[name] = core.account_bundle(trades, opens, cfg, settings, ss, start, end, marks)
     res = {"meta": {"days": days, "start": start, "end": end, "settings": settings, "params": params,
-                    "run_at": core.now_ms(), "secs": time.time() - t0, "raw_trades": len(trades)},
+                    "run_at": core.now_ms(), "secs": time.time() - t0, "raw_trades": len(trades),
+                    "lab": lab_summary(trades, cfg, start, end)},
            "accounts": accounts, "raw": {"trades": trades, "open": opens}, "chart": charts}
     if progress:
         progress("done", 1.0)
     return res
+
+
+def lab_summary(trades, cfg, start, end):
+    """size-independent R summary: whole period, first half vs second half, per symbol."""
+    fees = cfg["fees"]
+    mid = start + (end - start) // 2
+
+    def m(ts):
+        rs = [core.unit_r(t, fees) for t in sorted(ts, key=lambda t: t["exit_ts"])]
+        if not rs:
+            return {"n": 0, "r": 0.0, "wr": 0.0, "pf": 0.0, "dd": 0.0}
+        c = np.cumsum(rs)
+        pk = np.maximum.accumulate(np.concatenate([[0.0], c]))
+        gw = sum(r for r in rs if r > 0)
+        gl = -sum(r for r in rs if r <= 0)
+        return {"n": len(rs), "r": float(sum(rs)), "wr": sum(1 for r in rs if r > 0) / len(rs) * 100,
+                "pf": gw / gl if gl > 0 else (99.0 if gw > 0 else 0.0),
+                "dd": float(np.max(pk - np.concatenate([[0.0], c])))}
+    out = {"all": m(trades), "h1": m([t for t in trades if t["entry_ts"] < mid]),
+           "h2": m([t for t in trades if t["entry_ts"] >= mid])}
+    for sym in cfg["symbols"]:
+        out[sym] = m([t for t in trades if t["sym"] == sym])
+    return out
 
 
 # ---------------------------------------------------------------- optimizer
@@ -146,10 +179,12 @@ def sample_space(space, base, n, seed=None):
     return out
 
 
-def optimize(cfg, days, combos, progress=None, stop_flag=None):
+def optimize(cfg, days, combos, progress=None, stop_flag=None, lab=None):
     oc = cfg["optimizer"]
     base = dict(cfg["strategy"])
-    space = oc["space"]
+    space = dict(oc["space"])
+    if lab if lab is not None else oc.get("include_lab_space"):
+        space.update(oc.get("lab_space", {}))
     max_lb = max(space.get("zone_lookback", [base["zone_lookback"]]) + [base["zone_lookback"]])
     data, start, end = load_data(cfg, days, base, progress, max_lookback=max_lb)
     split = start + int((end - start) * oc["train_frac"])
@@ -195,6 +230,7 @@ if __name__ == "__main__":
     ap.add_argument("--risk", type=float, default=None)
     ap.add_argument("--balance", type=float, default=None)
     ap.add_argument("--progress-file", default=None, help="write progress json (used by the website)")
+    ap.add_argument("--lab", action="store_true", help="also search the interpretation variants")
     a = ap.parse_args()
     cfg = core.load_config()
     log = core.setup_logging("optimizer" if a.optimize else "backtest", cfg)
@@ -208,7 +244,8 @@ if __name__ == "__main__":
                                              "ts": core.now_ms()})
     if a.optimize:
         try:
-            res = optimize(cfg, a.days or cfg["optimizer"]["days"], a.combos or cfg["optimizer"]["combos"], pr)
+            res = optimize(cfg, a.days or cfg["optimizer"]["days"], a.combos or cfg["optimizer"]["combos"], pr,
+                           lab=True if a.lab else None)
         except Exception as e:
             log.exception("optimizer failed")
             if a.progress_file:

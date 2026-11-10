@@ -232,6 +232,25 @@ tr.new td{animation:rowin 1.6s ease}
 .btbanner.show{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
 .twocol{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 @media(max-width:1100px){.twocol{grid-template-columns:1fr}}
+.lab{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.lv{border:1px solid var(--line);border-radius:12px;padding:10px 11px;background:rgba(255,255,255,.015);transition:border-color .3s,box-shadow .3s}
+.lv.chg{border-color:rgba(167,139,255,.6);box-shadow:0 0 16px rgba(167,139,255,.15)}
+.lv .k{font:600 10px var(--mono);color:var(--mut);letter-spacing:.1em;text-transform:uppercase;display:flex;justify-content:space-between}
+.lv .k i{font-style:normal;color:var(--vi)}
+.lv .opts{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.lv .opt{display:flex;gap:8px;align-items:flex-start;font:11.5px var(--mono);color:var(--mut);cursor:pointer;padding:5px 7px;border-radius:8px;border:1px solid transparent;transition:all .2s}
+.lv .opt:hover{background:rgba(126,232,255,.04)}
+.lv .opt.on{color:var(--txt);border-color:rgba(126,232,255,.35);background:rgba(126,232,255,.06)}
+.lv .opt b{font-weight:600;color:var(--ice);min-width:0}
+.lv .opt.on b{color:#fff}
+.lv .opt span{display:block;font-size:10.5px;color:var(--mut);margin-top:1px}
+.lv input{width:100%;margin-top:7px;background:var(--bg2);border:1px solid var(--line2);color:var(--txt);padding:7px 9px;border-radius:8px;font:13px var(--mono)}
+.lv input:focus{outline:none;border-color:var(--vi)}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.chips span{font:500 10px var(--mono);padding:2px 6px;border-radius:5px;background:rgba(167,139,255,.12);border:1px solid rgba(167,139,255,.3);color:#d6ccff}
+.labbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0 4px}
+.labbar input{background:var(--bg2);border:1px solid var(--line2);color:var(--txt);padding:8px 10px;border-radius:9px;font:12px var(--mono);min-width:220px}
+.sub{font:600 10.5px var(--mono);letter-spacing:.16em;color:var(--mut);margin:16px 0 8px;text-transform:uppercase}
 .toast{position:fixed;left:50%;top:22px;transform:translateX(-50%) translateY(-20px);z-index:90;background:rgba(15,23,36,.96);border:1px solid var(--ice);color:var(--txt);padding:10px 16px;border-radius:12px;font:12px var(--mono);opacity:0;transition:all .35s;pointer-events:none;box-shadow:var(--glow)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 footer{font:11px var(--mono);color:var(--dim);text-align:center;padding:24px}
@@ -300,7 +319,7 @@ footer{font:11px var(--mono);color:var(--dim);text-align:center;padding:24px}
   <nav class="sec" id="nav">
     <a href="#overview">01 OVERVIEW</a><a href="#chart">02 CHART</a><a href="#status">03 STATUS</a>
     <a href="#positions">04 POSITIONS</a><a href="#trades">05 TRADES</a><a href="#journal">06 JOURNAL</a>
-    <a href="#backtest">07 BACKTEST</a><a href="#optimizer">08 OPTIMIZER</a><a href="#log">09 LOG</a>
+    <a href="#backtest">07 BACKTEST</a><a href="#lab">08 LAB</a><a href="#optimizer">09 OPTIMIZER</a><a href="#log">10 LOG</a>
   </nav>
 </header>
 
@@ -408,12 +427,33 @@ footer{font:11px var(--mono);color:var(--dim);text-align:center;padding:24px}
   </div>
 </section>
 
+<section id="lab" class="reveal">
+  <h2>Strategy lab · experiment with the interpretation<span class="r mut" id="labSub"></span></h2>
+  <div class="card frost">
+    <div class="small" style="line-height:1.7;margin-bottom:6px">Pick how each ambiguous rule is read, run it on the backtest period above (days / risk / balance), compare runs below.
+      Nothing changes on the live paper trader until you press <b class="vi">APPLY</b> on a run. Purple = differs from what the paper trader runs now.</div>
+    <div class="sub">interpretation</div>
+    <div class="lab" id="labModes"></div>
+    <div class="sub">parameters</div>
+    <div class="lab" id="labNums"></div>
+    <div class="labbar">
+      <input id="labLabel" placeholder="label for this run (optional)">
+      <button class="btn pri" id="labRun">▶ RUN LAB BACKTEST</button>
+      <button class="btn" id="labReset">RESET TO LIVE</button>
+      <span class="small" id="labInfo"></span>
+    </div>
+    <div class="sub">runs <span class="mut" style="letter-spacing:0;text-transform:none">· R is size-independent (after fees) · H1 / H2 = first / second half of the period</span></div>
+    <div class="tw" style="max-height:520px"><table id="labTbl"></table></div>
+  </div>
+</section>
+
 <section id="optimizer" class="reveal">
   <h2>Optimizer · maximise net R after fees<span class="r mut" id="opSub"></span></h2>
   <div class="card">
     <div class="form">
       <div><label>Period (days)</label><input id="opDays" type="number" value="365" min="30"></div>
       <div><label>Combinations</label><input id="opN" type="number" value="120" min="5" max="2000"></div>
+      <div><label>Search space</label><select id="opLab"><option value="0">parameters only</option><option value="1">parameters + interpretation variants</option></select></div>
       <div><button class="btn pri" id="opRun" style="width:100%">⚙ RUN OPTIMIZER</button></div>
       <div><button class="btn" id="opStop" style="width:100%">STOP</button></div>
     </div>
@@ -570,7 +610,7 @@ function renderTrades(b){const t=$('#trTbl');const tr=b.trades||[];
   tr.slice(0,800).map((x,i)=>{const k=x.sym+x.entry_ts;const row=`<tr class="${isNew(k)?'new':''}"><td class="mut">${tr.length-i}</td><td>${x.sym}</td><td><span class="tag ${x.dir===1?'L':'S'}">${x.side}</span></td><td>${tfmt(x.entry_ts)}</td><td>${tfmt(x.exit_ts)}</td>
    <td>${pxd(x.entry)}</td><td>${pxd(x.exit)}</td><td class="mut">${pxd(x.sl0)}</td><td>${fmt(x.sl_pct,2)}%</td><td>${x.skipped?'<span class="am">skipped</span>':fmt(x.qty,x.sym.startsWith('BTC')?3:1)}</td><td>${usd(x.notional)}</td><td>${fmt(x.lev,1)}×</td>
    <td class="mut">${usd(x.fees,3)}</td><td class="mut">${usd(x.funding_usd,3)}</td><td class="${cls(x.pnl)}">${susd(x.pnl)}</td><td class="${cls(x.r)}"><b>${sgn(x.r)}</b></td>
-   <td><span class="tag ${x.reason==='trail stop'?'T':'X'}">${(x.reason||'').toUpperCase()}</span></td><td>${dur((x.exit_ts-x.entry_ts)/3600000)}</td><td>${usd(x.bal_after)}</td></tr>`;return row}).join('');
+   <td><span class="tag ${x.reason==='trail stop'?'T':x.reason==='take profit'?'L':'X'}">${(x.reason||'').toUpperCase()}</span></td><td>${dur((x.exit_ts-x.entry_ts)/3600000)}</td><td>${usd(x.bal_after)}</td></tr>`;return row}).join('');
   S.tradeIds=new Set(tr.map(x=>x.sym+x.entry_ts));S.firstLoad=false}
 $('#csvBtn').onclick=()=>{const tr=(S.bundle&&S.bundle.trades)||[];const cols=['sym','side','entry_ts','exit_ts','entry','exit','sl0','qty','notional','lev','fees','funding_usd','pnl','r','reason','bal_after'];
   const csv=[cols.join(',')].concat(tr.map(x=>cols.map(c=>c.endsWith('_ts')?new Date(x[c]).toISOString():x[c]).join(','))).join('\n');
@@ -673,7 +713,7 @@ function renderStatus(j){const g=$('#stGrid');const syms=j.symbols||[];
       <div>breakout</div><div>${tfmt(su.bo_ts)}</div><div>pullback candles</div><div>${su.pb} / ${(S.status.strategy||{}).pullback_bars||3}</div>`;
       if(su.fib)kv+=`<div>anchor (wick)</div><div>${pxd(su.L)}</div><div>swing extreme</div><div>${pxd(su.ext)}</div><div>61.8% entry zone</div><div class="vi">${pxd(su.fib)}</div><div>72.2% re-anchor</div><div>${pxd(su.deep)}</div>`;
       kv+=`<div>expires in</div><div>${su.bars_left} bars (${dur(su.bars_left/4)})</div>`}
-    if(ps)kv+=`<div>position</div><div><span class="tag ${ps.dir===1?'L':'S'}">${ps.dir===1?'LONG':'SHORT'}</span> @ ${pxd(ps.entry)}</div><div>stop</div><div class="ice">${pxd(ps.sl)} <span class="mut">(init ${pxd(ps.sl0)})</span></div><div>structure ${ps.dir===1?'high':'low'}</div><div>${ps.struct?pxd(ps.struct):'forming…'}</div><div>trail steps</div><div>${(ps.trail||[]).length}</div>`;
+    if(ps)kv+=`<div>position</div><div><span class="tag ${ps.dir===1?'L':'S'}">${ps.dir===1?'LONG':'SHORT'}</span> @ ${pxd(ps.entry)}</div><div>stop</div><div class="ice">${pxd(ps.sl)} <span class="mut">(init ${pxd(ps.sl0)})</span></div><div>structure ${ps.dir===1?'high':'low'}</div><div>${ps.struct?pxd(ps.struct):'forming…'}</div><div>trail steps</div><div>${(ps.trail||[]).length}</div>${ps.tp?`<div>take profit</div><div class="pos">${pxd(ps.tp)}</div>`:''}`;
     const zs=(s.zones||[]).map(z=>`<span class="${su&&Math.abs(su.zone.bot-z.bot)<1e-9?'hot':''}" title="${z.pivots} pivots · ${z.touches} touches · ${z.kind}">${pxd(z.bot)}–${pxd(z.top)} <span class="mut">×${z.pivots}</span></span>`).join('');
     return `<div class="card frost"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font:700 15px var(--mono);letter-spacing:.08em">${sym}</b><span class="small">${s.pending?'<span class="am">ENTRY PENDING</span>':''} 4h zones @ ${tfmt(s.zones_ts)}</span></div>
       ${pipe}<div class="stline">${esc(s.text)}<span class="cur"></span></div><div class="kv">${kv}</div><div class="zl">${zs||'<span>no valid zones</span>'}</div></div>`}).join('')}
@@ -699,7 +739,7 @@ async function loadStatus(){try{const j=await api('api/status');S.status=j;$('#v
   document.title=(j.ticks.BTCUSDT&&j.ticks.BTCUSDT.last?'BTC '+pxd(j.ticks.BTCUSDT.last)+' · ':'')+'JANUARY'}catch(e){$('#hDot').className='dot bad';$('#hEng').textContent='WEB ERROR'}}
 async function loadBundle(){try{let j;
   if(S.mode==='backtest'){const q=`acct=${S.acct}&risk=${$('#btRisk').value}&balance=${$('#btBal').value}&kelly=${$('#btKelly').value}`;j=await api('api/bt/overview?'+q);
-    if(j.empty){$('#btMeta').textContent='no backtest yet - run one below';return}const m=j.meta;const dy=t=>new Date(t).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});$('#btMeta').textContent=`${fmt(m.days,0)} days · ${dy(m.start)} → ${dy(m.end)} · ${m.raw_trades} trades · risk ${fmt(m.settings.risk_pct,2)}% · ${m.settings.kelly_sizing?'½-Kelly':'fixed'} · start ${usd(m.settings.start_balance)}`}
+    if(j.empty){$('#btMeta').textContent='no backtest yet - run one below';return}const m=j.meta;const dy=t=>new Date(t).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});$('#btMeta').textContent=`${fmt(m.days,0)} days · ${dy(m.start)} → ${dy(m.end)} · ${m.raw_trades} trades · risk ${fmt(m.settings.risk_pct,2)}% · ${m.settings.kelly_sizing?'½-Kelly':'fixed'} · start ${usd(m.settings.start_balance)}`+(()=>{const lv=(S.status&&S.status.strategy)||{};const d=Object.entries(m.params||{}).filter(([k,v])=>lv[k]!==undefined&&lv[k]!==v).map(([k,v])=>k+'='+v);return d.length?' · LAB: '+d.join(', '):' · live parameters'})()}
   else j=await api('api/overview?acct='+S.acct);
   S.bundle=j;renderOverview(j);renderPositions(j);renderTrades(j);renderJournal();renderTape()}catch(e){console.error(e)}}
 async function loadLog(){try{const j=await api('api/log?n=400');const box=$('#logBox');const errOnly=$('#logErr').classList.contains('on');
@@ -710,7 +750,7 @@ $('#logFollow').onclick=e=>e.target.classList.toggle('on');$('#logErr').onclick=
 
 /* ---------------- backtest */
 function renderBt(b){if(!b)return;$('#btBar').style.width=(b.pct*100)+'%';$('#btStage').innerHTML=b.error?`<span class="neg">error: ${esc(b.error)}</span>`:esc(b.stage)+(b.running?' …':'');
-  $('#btRun').disabled=!!b.running;if(S._btWas&&!b.running&&!b.error){toast('backtest finished ❄');setMode('backtest')}S._btWas=b.running}
+  $('#btRun').disabled=!!b.running;$('#labRun').disabled=!!b.running;if(S._btWas&&!b.running&&!b.error){toast('backtest finished ❄');if(S._labWas){S._labWas=false;loadLab()}else setMode('backtest')}S._btWas=b.running}
 $('#btRun').onclick=async()=>{try{await api('api/backtest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({days:+$('#btDays').value,risk:+$('#btRisk').value,balance:+$('#btBal').value,kelly:$('#btKelly').value==='1'})});
   S._btWas=true;toast('backtest started - downloading Bybit data');loadStatus()}catch(e){toast(e.message,'var(--rd)')}};
 $('#btView').onclick=()=>{setMode('backtest');location.hash='#overview'};
@@ -729,12 +769,50 @@ async function loadOpt(){try{const j=await api('api/optimize/result');const r=j.
   t.innerHTML='<tr><th>Rank</th><th>Train R</th><th>n</th><th>WR</th><th>PF</th><th>DD R</th><th>Test R</th><th>n</th><th>PF</th><th>DD R</th><th>avg R</th><th>Changed parameters</th><th></th></tr>'+
     (r.base?row(r.base,0,true):'')+r.top.map((x,i)=>row(x,i,false)).join('')}catch(e){}}
 window.applyOpt=async i=>{if(!confirm('Apply optimizer rank #'+(i+1)+' to the live paper trader?'))return;try{await api('api/optimize/apply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rank:i})});toast('parameters applied - paper trader reloads');loadOpt()}catch(e){toast(e.message,'var(--rd)')}};
-$('#opRun').onclick=async()=>{try{await api('api/optimize',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({days:+$('#opDays').value,combos:+$('#opN').value})});S._opWas=true;toast('optimizer started');loadStatus()}catch(e){toast(e.message,'var(--rd)')}};
+$('#opRun').onclick=async()=>{try{await api('api/optimize',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({days:+$('#opDays').value,combos:+$('#opN').value,lab:$('#opLab').value==='1'})});S._opWas=true;toast('optimizer started');loadStatus()}catch(e){toast(e.message,'var(--rd)')}};
 $('#opStop').onclick=async()=>{await api('api/optimize/stop',{method:'POST'});toast('optimizer stopped');loadStatus()};
+
+/* ---------------- strategy lab */
+const LAB={live:{},opts:{},cur:{},runs:[]};
+const DESC={
+ zone_method:{pivots:'4h swing wicks clustered into zones (v1)',wick_density:'band where the most 4h wicks react'},
+ anchor_mode:{pivot:'last confirmed 15m swing low before the break (v1)',leg_low:'lowest low of the breakout leg',range_low:'lowest low of the whole A-B range'},
+ pullback_mode:{strict:'red candles, each closing lower (v1)',color:'red candles, colour only',lower_highs:'lower highs + lower lows, colour ignored'},
+ entry_window:{after_touch:'engulfing anywhere after the 61.8% touch (v1)',in_band:'engulfing must sit in the 61.8-72.2 band'},
+ engulf_mode:{body:'body engulfs body (v1)',close_beyond:'body engulfs + closes beyond the previous wick'},
+ exit_mode:{trail:'structure trailing stop only (v1)',trail_zone_tp:'trail + take profit at the next zone (C), maker fee',trail_rr_tp:'trail + fixed R target (tp_r)'},
+ invalidate:{close:'a close back in B cancels the setup',touch:'a wick touch of B cancels the setup'}};
+const TITLE={zone_method:'4h zones',anchor_mode:'"the low" (fib + SL anchor)',pullback_mode:'what counts as pullback candle',entry_window:'where the engulfing may happen',engulf_mode:'engulfing definition',exit_mode:'exit',invalidate:'back to A-B'};
+async function loadLab(){try{const j=await api('api/lab');LAB.live=j.live;LAB.opts=j.options;LAB.runs=j.runs;if(!Object.keys(LAB.cur).length)LAB.cur=Object.assign({},j.live);renderLabForm();renderLabRuns()}catch(e){}}
+function renderLabForm(){const modes=Object.keys(LAB.opts);
+  $('#labModes').innerHTML=modes.map(k=>`<div class="lv ${LAB.cur[k]!==LAB.live[k]?'chg':''}"><div class="k">${TITLE[k]||k}<i>${k}</i></div><div class="opts">${LAB.opts[k].map(o=>`<div class="opt ${LAB.cur[k]===o?'on':''}" onclick="labSet('${k}','${o}')"><div><b>${o}</b>${o===LAB.live[k]?' <span style="display:inline;color:var(--au)">· live</span>':''}<span>${(DESC[k]||{})[o]||''}</span></div></div>`).join('')}</div></div>`).join('');
+  const nums=Object.keys(LAB.live).filter(k=>!modes.includes(k)&&typeof LAB.live[k]==='number');
+  $('#labNums').innerHTML=nums.map(k=>`<div class="lv ${+LAB.cur[k]!==+LAB.live[k]?'chg':''}"><div class="k">${k}<i>live ${LAB.live[k]}</i></div><input type="number" step="any" value="${LAB.cur[k]}" onchange="labSet('${k}',+this.value)"></div>`).join('');
+  const d=labDiff(LAB.cur);$('#labInfo').innerHTML=d.length?`<span class="vi">${d.length} change${d.length>1?'s':''}</span> vs live`:'identical to the live paper trader'}
+window.labSet=(k,v)=>{LAB.cur[k]=v;renderLabForm()};
+function labDiff(p){return Object.entries(p).filter(([k,v])=>LAB.live[k]!==undefined&&LAB.live[k]!==v)}
+$('#labReset').onclick=()=>{LAB.cur=Object.assign({},LAB.live);renderLabForm()};
+$('#labRun').onclick=async()=>{try{await api('api/backtest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({days:+$('#btDays').value,risk:+$('#btRisk').value,balance:+$('#btBal').value,kelly:$('#btKelly').value==='1',params:LAB.cur,label:$('#labLabel').value})});
+  S._btWas=true;S._labWas=true;toast('lab backtest started');loadStatus()}catch(e){toast(e.message,'var(--rd)')}};
+function renderLabRuns(){const t=$('#labTbl');const R=LAB.runs;$('#labSub').textContent=R.length+' runs stored';
+  if(!R.length){t.innerHTML='<tr><td class="empty">no lab runs yet - change something above and run it</td></tr>';return}
+  const best=Math.max(...R.map(r=>r.lab.all.r));
+  t.innerHTML='<tr><th>When</th><th>Label / changes vs live</th><th>Days</th><th>n</th><th>R</th><th>H1 R</th><th>H2 R</th><th>BTC R</th><th>SOL R</th><th>PF</th><th>WR</th><th>DD R</th><th></th></tr>'+
+  R.map(r=>{const L=r.lab,live=labDiff(r.params).length===0;const ch=Object.entries(r.params).filter(([k,v])=>LAB.live[k]!==undefined&&LAB.live[k]!==v);
+   return `<tr><td class="mut">${tfmt(r.run_at)}</td><td style="white-space:normal;min-width:240px">${r.label?`<b>${esc(r.label)}</b><br>`:''}<div class="chips">${live?'<span style="background:rgba(92,255,176,.1);border-color:rgba(92,255,176,.35);color:var(--au)">= live</span>':ch.map(([k,v])=>`<span>${k}=${v}</span>`).join('')}</div></td>
+   <td>${fmt(r.days,0)}</td><td>${L.all.n}</td><td class="${cls(L.all.r)}"><b>${sgn(L.all.r,1)}</b>${L.all.r===best?' ★':''}</td><td class="${cls(L.h1.r)}">${sgn(L.h1.r,1)}</td><td class="${cls(L.h2.r)}">${sgn(L.h2.r,1)}</td>
+   <td class="${cls((L.BTCUSDT||{}).r)}">${sgn((L.BTCUSDT||{}).r,1)}</td><td class="${cls((L.SOLUSDT||{}).r)}">${sgn((L.SOLUSDT||{}).r,1)}</td><td>${fmt(L.all.pf)}</td><td>${fmt(L.all.wr,0)}%</td><td class="mut">-${fmt(L.all.dd,1)}</td>
+   <td><button class="btn sm" onclick="labView('${r.id}')">VIEW</button> <button class="btn sm" onclick="labLoad('${r.id}')">EDIT</button> ${live?'':`<button class="btn sm" onclick="labApply('${r.id}')">APPLY</button>`} <button class="btn sm" onclick="labDel('${r.id}')">×</button></td></tr>`}).join('')}
+const jpost=(u,b)=>api(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b||{})});
+window.labView=async id=>{await jpost('api/lab/view',{id});setMode('backtest');location.hash='#overview'};
+window.labLoad=id=>{const r=LAB.runs.find(x=>x.id===id);if(r){LAB.cur=Object.assign({},LAB.live,r.params);$('#labLabel').value=r.label||'';renderLabForm();toast('run loaded into the lab form')}};
+window.labApply=async id=>{const r=LAB.runs.find(x=>x.id===id);if(!confirm('Apply this interpretation to the LIVE paper trader?\n\n'+labDiff(r.params).map(([k,v])=>k+' = '+v).join('\n')))return;
+  try{await jpost('api/lab/apply',{id});toast('applied - paper trader rebuilds itself');LAB.cur={};loadLab();loadStatus()}catch(e){toast(e.message,'var(--rd)')}};
+window.labDel=async id=>{await jpost('api/lab/delete',{id});loadLab()};
 
 /* ---------------- boot */
 function refreshAll(){loadStatus();loadBundle();loadChart();loadLog()}
-initEq();initChart();sizeOvl();refreshAll();loadOpt();
+initEq();initChart();sizeOvl();refreshAll();loadOpt();loadLab();
 setInterval(loadStatus,5000);
 setInterval(()=>{if(S.mode==='paper')loadBundle()},10000);
 setInterval(()=>{if(S.mode==='paper'&&!document.hidden)loadChart()},15000);

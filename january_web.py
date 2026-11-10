@@ -15,6 +15,7 @@ import threading
 import time
 
 from flask import Flask, Response, request, send_from_directory
+from werkzeug.exceptions import HTTPException
 
 import january_core as core
 import january_backtest as bt
@@ -26,6 +27,10 @@ STATIC = os.path.join(core.BASE_DIR, "static")
 EVENTS_PATH = os.path.join(core.DATA_DIR, "events.json")
 OPT_PROGRESS = os.path.join(core.DATA_DIR, "optimizer_progress.json")
 CF_LOG = os.path.join(core.LOG_DIR, "cloudflared.log")
+LAB_DIR = os.path.join(core.DATA_DIR, "lab")
+LAB_RUNS = os.path.join(core.DATA_DIR, "lab_runs.json")
+LAB_KEEP = 30
+os.makedirs(LAB_DIR, exist_ok=True)
 BT = {"running": False, "stage": "idle", "pct": 0.0, "error": None, "result": None, "started": None}
 BT_LOCK = threading.Lock()
 CACHE = {}
@@ -88,6 +93,8 @@ def _auth():
 
 @app.errorhandler(Exception)
 def _err(e):
+    if isinstance(e, HTTPException):  # 404 favicon etc. are not errors worth a Discord ping
+        return e
     log.exception(f"web error on {request.path}")
     return jresp({"error": str(e)}, 500)
 
@@ -352,12 +359,55 @@ def _bt_settings():
     return s
 
 
-def _bt_thread(days, settings):
+def _lab_record(res, label):
+    live = cfg["strategy"]
+    p = res["meta"]["params"]
+    rid = str(res["meta"]["run_at"])
+    core.save_json(os.path.join(LAB_DIR, rid + ".json"), res)
+    runs = core.read_json(LAB_RUNS, []) or []
+    runs.insert(0, {"id": rid, "run_at": res["meta"]["run_at"], "days": res["meta"]["days"], "label": label or "",
+                    "start": res["meta"]["start"], "end": res["meta"]["end"], "params": p,
+                    "diff": {k: v for k, v in p.items() if live.get(k) != v}, "lab": res["meta"]["lab"]})
+    for old in runs[LAB_KEEP:]:
+        try:
+            os.remove(os.path.join(LAB_DIR, old["id"] + ".json"))
+        except OSError:
+            pass
+    core.save_json(LAB_RUNS, runs[:LAB_KEEP])
+
+
+def clean_params(raw):
+    """only known strategy keys, cast to the type of the default value."""
+    out = dict(cfg["strategy"])
+    for k, v in (raw or {}).items():
+        if k not in core.DEFAULT_CONFIG["strategy"]:
+            continue
+        d = core.DEFAULT_CONFIG["strategy"][k]
+        try:
+            if isinstance(d, str):
+                v = str(v)
+                opts = cfg["optimizer"].get("lab_space", {}).get(k) or (["close", "touch"] if k == "invalidate" else None)
+                if opts and v not in opts:
+                    continue
+            elif isinstance(d, bool):
+                v = bool(v)
+            elif isinstance(d, int):
+                v = int(round(float(v)))
+            else:
+                v = float(v)
+        except (TypeError, ValueError):
+            continue
+        out[k] = v
+    return out
+
+
+def _bt_thread(days, settings, params=None, label=""):
     def pr(stage, x):
         BT["stage"], BT["pct"] = stage, x
     try:
-        res = bt.run_backtest(cfg_now(), days, settings, progress=pr)
+        res = bt.run_backtest(cfg_now(), days, settings, params=params, progress=pr)
         core.save_json(bt.BT_PATH, res)
+        _lab_record(res, label)
         BT["result"] = res
         BT["stage"], BT["pct"] = "done", 1.0
         log.info(f"backtest done: {days} days, {res['meta']['raw_trades']} trades, {res['meta']['secs']:.1f}s")
@@ -384,8 +434,10 @@ def api_backtest():
             s["start_balance"] = float(j["balance"])
         if j.get("kelly") is not None:
             s["kelly_sizing"] = bool(j["kelly"])
+        params = clean_params(j.get("params")) if j.get("params") else None
         BT.update(running=True, stage="starting", pct=0.0, error=None, started=core.now_ms())
-        threading.Thread(target=_bt_thread, args=(days, s), daemon=True).start()
+        threading.Thread(target=_bt_thread, args=(days, s, params, str(j.get("label") or "")[:60]),
+                         daemon=True).start()
     return jresp({"ok": True})
 
 
@@ -418,10 +470,11 @@ def api_optimize():
     combos = max(5, min(int(j.get("combos") or cfg["optimizer"]["combos"]), 2000))
     core.save_json(OPT_PROGRESS, {"running": True, "stage": "starting", "pct": 0, "ts": core.now_ms()})
     out = open(os.path.join(core.LOG_DIR, "optimizer.out"), "w")
-    OPT_PROC["p"] = subprocess.Popen([sys.executable, os.path.join(core.BASE_DIR, "january_backtest.py"),
-                                      "--optimize", "--days", str(days), "--combos", str(combos),
-                                      "--progress-file", OPT_PROGRESS], cwd=core.BASE_DIR, stdout=out,
-                                     stderr=subprocess.STDOUT)
+    cmd = [sys.executable, os.path.join(core.BASE_DIR, "january_backtest.py"), "--optimize", "--days", str(days),
+           "--combos", str(combos), "--progress-file", OPT_PROGRESS]
+    if j.get("lab"):
+        cmd.append("--lab")
+    OPT_PROC["p"] = subprocess.Popen(cmd, cwd=core.BASE_DIR, stdout=out, stderr=subprocess.STDOUT)
     log.info(f"optimizer started: {days} days, {combos} combos")
     return jresp({"ok": True})
 
@@ -460,6 +513,59 @@ def api_optimize_apply():
     cfg_now()
     log.info(f"optimizer rank #{i + 1} applied to config.json (paper trader reloads automatically)")
     return jresp({"ok": True, "strategy": cfg["strategy"]})
+
+
+# ------------------------------------------------------------------ strategy lab
+@app.route("/api/lab")
+def api_lab():
+    c = cfg_now()
+    opts = dict(c["optimizer"].get("lab_space", {}))
+    opts["invalidate"] = ["close", "touch"]
+    return jresp({"live": c["strategy"], "defaults": core.DEFAULT_CONFIG["strategy"], "options": opts,
+                  "runs": core.read_json(LAB_RUNS, []) or []})
+
+
+def _lab_get(rid):
+    runs = core.read_json(LAB_RUNS, []) or []
+    return next((r for r in runs if r["id"] == str(rid)), None)
+
+
+@app.route("/api/lab/view", methods=["POST"])
+def api_lab_view():
+    j = request.get_json(force=True, silent=True) or {}
+    p = os.path.join(LAB_DIR, str(j.get("id")) + ".json")
+    res = core.read_json(p)
+    if not res:
+        return jresp({"error": "run not found"}, 404)
+    BT["result"] = res
+    BT["stage"], BT["pct"], BT["error"] = "done", 1.0, None
+    core.save_json(bt.BT_PATH, res)
+    return jresp({"ok": True})
+
+
+@app.route("/api/lab/apply", methods=["POST"])
+def api_lab_apply():
+    j = request.get_json(force=True, silent=True) or {}
+    r = _lab_get(j.get("id"))
+    if not r:
+        return jresp({"error": "run not found"}, 404)
+    keys = set(core.DEFAULT_CONFIG["strategy"])
+    core.save_strategy_params({k: v for k, v in r["params"].items() if k in keys})
+    cfg_now()
+    log.info(f"lab run {r['id']} applied to the paper trader: {r['diff']}")
+    return jresp({"ok": True})
+
+
+@app.route("/api/lab/delete", methods=["POST"])
+def api_lab_delete():
+    j = request.get_json(force=True, silent=True) or {}
+    runs = [r for r in (core.read_json(LAB_RUNS, []) or []) if r["id"] != str(j.get("id"))]
+    try:
+        os.remove(os.path.join(LAB_DIR, str(j.get("id")) + ".json"))
+    except OSError:
+        pass
+    core.save_json(LAB_RUNS, runs)
+    return jresp({"ok": True})
 
 
 if __name__ == "__main__":

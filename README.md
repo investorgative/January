@@ -59,6 +59,16 @@ always in the dashboard header and in `data/logs/cloudflared.log`.
 Because the page is public, you can set `"web": {"password": "something"}`. The browser then asks
 for a login (any username, that password).
 
+### Debug bundle (send your data to Claude)
+```bash
+cd ~/january && git pull
+python3 debug_bundle.py --serve --notes "what felt off"
+```
+This creates `~/january_debug_<date>.zip` with config (webhooks/password removed), trades, state, logs, the last
+backtest/optimizer and the candle database, plus system info. With `--serve` it prints a link
+(`http://<pi-ip>:8799/...`) that you open on your phone or iPad (same WiFi) to download the zip, then upload it in the chat.
+Stop the download server with Ctrl+C.
+
 ### Command line (optional)
 ```bash
 ./venv/bin/python january_backtest.py --days 365 --risk 5 --balance 100

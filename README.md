@@ -1,5 +1,7 @@
 # ❄ JANUARY — 4h structure · 15m execution (BTCUSDT · SOLUSDT, Bybit)
 
+> 💜 **February** (January + streak defence) lives in [`february/`](february/README.md) as a separate app on port 8759.
+
 Paper trader + dashboard + backtester + optimizer for a Raspberry Pi.
 The paper trader and the backtester share one engine (`january_core.Engine`), so a
 paper trade and a backtest trade come from exactly the same code. In testing, a

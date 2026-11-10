@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-FEBRUARY - dashboard + backtester/optimizer API (port 8759, tmux session "FebruaryWeb").
+FEBRUARY - dashboard + backtester/optimizer API (port 8753, tmux session "FebruaryWeb").
 Cloudflare-tunnel friendly: relative URLs, plain HTTP polling (no websockets),
 Cache-Control: no-store on every API route, gzip, optional basic-auth password.
 """
@@ -579,7 +579,7 @@ def api_lab_delete():
 
 
 if __name__ == "__main__":
-    port = int(cfg["web"].get("port", 8759))
+    port = int(cfg["web"].get("port", 8753))
     log.info(f"FEBRUARY web on http://{cfg['web'].get('host', '0.0.0.0')}:{port}")
     try:
         from waitress import serve

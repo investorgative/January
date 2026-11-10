@@ -120,10 +120,10 @@ def bybit_check():
 
 def local_web_check():
     try:
-        with urllib.request.urlopen("http://127.0.0.1:8759/healthz", timeout=5) as r:
+        with urllib.request.urlopen("http://127.0.0.1:8753/healthz", timeout=5) as r:
             return f"dashboard /healthz -> {r.status} {r.read(20).decode()}"
     except Exception as e:
-        return f"dashboard not reachable on :8759 -> {e}"
+        return f"dashboard not reachable on :8753 -> {e}"
 
 
 def sysinfo():

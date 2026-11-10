@@ -1,7 +1,7 @@
 # 💜 FEBRUARY — January's S/R breakout engine + streak defence
 
 February is a separate app inside the January repo (`~/january/february`). It has its own paper
-trader, dashboard (port **8759**), data, database, config and Discord webhooks. **January's files are not
+trader, dashboard (port **8753**), data, database, config and Discord webhooks. **January's files are not
 touched**, and both can run side by side.
 
 ## Why January has long losing streaks (research on Bybit data, Nov 2024 – Nov 2026)
@@ -55,7 +55,7 @@ chmod +x setup.sh && ./setup.sh      # own venv, copies January's candle databas
 nano config.json                     # Discord webhooks for February (BTCUSDT, SOLUSDT, errors) - can be new channels
 ./start.sh                           # tmux sessions February, FebruaryWeb, FebruaryCloud
 ```
-Dashboard: `http://<pi-ip>:8759`. The public trycloudflare URL is printed by `start.sh` and shown in the header.
+Dashboard: `http://<pi-ip>:8753`. The public trycloudflare URL is printed by `start.sh` and shown in the header.
 `./stop.sh` stops only February. January keeps running.
 
 ```bash

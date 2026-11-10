@@ -144,7 +144,7 @@ DEFAULT_CONFIG = {
         },
         "include_lab_space": False,
     },
-    "web": {"port": 8759, "host": "0.0.0.0", "password": ""},
+    "web": {"port": 8753, "host": "0.0.0.0", "password": ""},
     "discord": {
         "BTCUSDT": "",
         "SOLUSDT": "",

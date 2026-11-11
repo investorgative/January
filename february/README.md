@@ -45,6 +45,8 @@ Optional switches (Strategy Lab and config): `trend_filter` (di / ema200 / mom /
 shadow-trades every signal and only sizes real positions while the last N closed trades are net positive. All of
 them are off by default because on this data they cost more R than they saved.
 
+**Live:** see the execution section. With $8, Bybit's minimum order sizes, not the risk %, decide many trade sizes.
+
 Mind the risk: with a 10 R drawdown, 5 % risk per trade means roughly a −40 % equity drawdown (8.25 % ≈ −55 to −60 %).
 
 ## Setup on the Pi
@@ -65,35 +67,45 @@ tmux attach -t FebruaryWeb    # web server
 python3 debug_bundle.py --serve --notes "..."                              # data export for Claude
 ```
 
-## Bybit Demo Trading (paper money on your Bybit demo account)
-February can mirror every trade on your **Bybit demo account**. The executor is hard-locked to
-`https://api-demo.bybit.com`, and real-money trading is not implemented anywhere (the LIVE button stays locked).
+## Bybit execution: DEMO and LIVE
+February's engine stays the master. Two independent executors can mirror its trades on Bybit:
 
-1. bybit.com → switch to **Demo Trading** → avatar → **API** → create a system-generated key
-   (permissions: Contract → Orders + Positions). Keys must be created *inside* Demo Trading.
-2. `nano ~/january/february/config.json`, add:
-   ```json
-   "demo": {"api_key": "YOUR_DEMO_KEY", "api_secret": "YOUR_DEMO_SECRET", "arm_pin": "a PIN you choose",
-            "leverage": 10, "capital_usd": 0}
-   ```
-   `capital_usd: 0` sizes from the demo USDT balance (Bybit gives 50,000 USDT by default). Set e.g. `100` to size
-   as if the account had $100, so it mirrors your $100 paper accounts.
-3. `./stop.sh && ./start.sh`, open the dashboard → **DEMO** in the header → **ARM** (asks for the PIN).
+| | DEMO | LIVE (real money) |
+|---|---|---|
+| host (hard-coded) | `api-demo.bybit.com` | `api.bybit.com` (bybit.com global, USDT perpetuals) |
+| keys | created inside Demo Trading | bybit.com → API, **Contract: Orders + Positions only, never withdrawals** |
+| config block | `"demo"` | `"live"` |
+| arm | header DEMO → ARM + PIN | header LIVE → ARM LIVE + PIN + type `LIVE` |
+| risk | website risk % (or `risk_pct`) | `risk_pct` (default 10 %) |
 
-What happens while armed:
-* **Entry:** market order, then a stop-loss on the position, plus a reduce-only limit take-profit at zone C (and a partial limit if `partial_r` is on).
-* **Trailing:** every trail moves the stop on Bybit.
-* **Engine close:** the rest of the position is closed and open orders are cancelled.
-* **Every 60 s, the bot reconciles with Bybit:** it re-sets a stop that differs, and closes BTC/SOL positions the engine does not hold.
-  (Don't trade BTCUSDT/SOLUSDT by hand on the demo account while armed.)
-* **Sizing:** risk % from the header × base balance, where a stop-out (fees included) is 1 R. The edge monitor applies too.
-* **Arming mid-trade:** the bot starts mirroring with the next entry.
-* **FLATTEN:** closes everything on the demo account and disarms (PIN required).
-* **Logging:** every action is logged in the dashboard and `data/demo_state.json`. Errors go to the Discord error webhook.
+**LIVE defaults (sized for an ~$8 account):**
+* 10 % risk per trade, 20× leverage cap.
+* **Minimum size:** Bybit's minimum order is allowed when the risk-based size is smaller. On BTC that means 0.001 BTC (~$73), which is a ~$0.60–1.50 loss at the stop.
+* **Hard cap of $1.50 loss per trade:** a BTC setup with a stop wider than ~2 % is skipped.
+* **Daily loss stop of −$3.00:** no new entries for the rest of the day.
+* **Equity floor of $3.00:** trading HALTS until you reset it with the PIN (RESET HALT button).
+* **Free-margin check before every order.**
+* **The stop is mandatory:** if Bybit rejects the stop-loss after the entry fill, the position is closed immediately.
+* **FLATTEN** closes everything at market and disarms.
+
+Config (`nano ~/january/february/config.json`):
+```json
+"live": {"api_key": "YOUR_KEY", "api_secret": "YOUR_SECRET", "arm_pin": "a PIN",
+         "risk_pct": 10, "leverage": 20, "max_loss_per_trade": 1.5, "max_daily_loss": 3, "min_equity": 3},
+"demo": {"api_key": "DEMO_KEY", "api_secret": "DEMO_SECRET", "arm_pin": "another PIN"}
+```
+Every order is mirrored as follows:
+* **Entry:** market order, then a stop-loss on the position, then reduce-only limit take-profit at zone C (and partial, if on).
+* **Trailing:** the stop moves on Bybit.
+* **Engine close:** the rest is closed and orders cancelled.
+* **Reconcile:** every 60 s.
+
+While armed, don't trade BTCUSDT/SOLUSDT by hand on that account: positions the engine doesn't hold get closed.
+Every action is logged on the dashboard, and LIVE entries and errors also go to Discord.
 
 ## Verified
 * No look-ahead: truncated-data replays give identical trades. All regime numbers come from closed 4h candles only.
-* Demo executor: tested end-to-end against a signature-checking mock of the Bybit v5 API (60 simulated days, armed):
+* Executors (demo + live): tested end-to-end against a signature-checking mock of the Bybit v5 API (60 simulated days, armed):
   every request correctly signed, 5 % risk sizing, stops/trails/take-profits/partials/closes mirrored.
 * Paper trader == backtester: a 60-day accelerated live simulation on real candles (with breakeven and partials
   switched on) produced exactly the same 9 trades, exits and partial fills as the backtester.

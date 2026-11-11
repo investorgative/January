@@ -21,7 +21,7 @@ import hmac as _hmac
 
 import february_core as core
 import february_backtest as bt
-import february_demo as demo
+import february_exec as ex
 
 cfg = core.load_config()
 log = core.setup_logging("web", cfg)
@@ -528,18 +528,18 @@ def api_optimize_apply():
     return jresp({"ok": True, "strategy": cfg["strategy"]})
 
 
-# ------------------------------------------------------------------ bybit demo trading
+# ------------------------------------------------------------------ bybit execution (demo / live)
 PIN_FAILS = []
 
 
-def _pin_ok(pin):
-    want = str(cfg.get("demo", {}).get("arm_pin") or "")
+def _pin_ok(kind, pin):
+    want = str(cfg.get(kind, {}).get("arm_pin") or "")
     now = time.time()
     PIN_FAILS[:] = [t for t in PIN_FAILS if now - t < 600]
     if len(PIN_FAILS) >= 5:
         return False, "too many wrong PINs - wait 10 minutes"
     if not want:
-        return False, "set demo.arm_pin in config.json first"
+        return False, f"set {kind}.arm_pin in config.json first"
     if not _hmac.compare_digest(str(pin or ""), want):
         PIN_FAILS.append(now)
         time.sleep(1)
@@ -547,43 +547,76 @@ def _pin_ok(pin):
     return True, ""
 
 
-@app.route("/api/demo")
-def api_demo():
+def _kind(k):
+    if k not in ("demo", "live"):
+        raise ValueError("unknown executor")
+    return k
+
+
+def _ctl_update(kind, **kw):
+    cp, _ = ex.paths(kind)
+    ctl = core.read_json(cp, {}) or {}
+    ctl.update(kw)
+    core.save_json(cp, ctl)
+    with CACHE_LOCK:
+        CACHE.pop("exec_" + kind, None)
+    return ctl
+
+
+@app.route("/api/exec/<kind>")
+def api_exec(kind):
+    kind = _kind(kind)
     c = cfg_now()
-    return jresp(cached("demo", 8, lambda: demo.snapshot(c)))
+    return jresp(cached("exec_" + kind, 8, lambda: ex.snapshot(kind, c)))
 
 
-@app.route("/api/demo/arm", methods=["POST"])
-def api_demo_arm():
+@app.route("/api/exec/<kind>/arm", methods=["POST"])
+def api_exec_arm(kind):
+    kind = _kind(kind)
     j = request.get_json(force=True, silent=True) or {}
-    ok, why = _pin_ok(j.get("pin"))
+    ok, why = _pin_ok(kind, j.get("pin"))
     if not ok:
         return jresp({"error": why}, 403)
-    if not cfg.get("demo", {}).get("api_key"):
-        return jresp({"error": "add your Bybit DEMO api_key / api_secret to config.json first"}, 400)
-    ctl = core.read_json(demo.CONTROL_PATH, {}) or {}
-    ctl["armed"] = bool(j.get("armed"))
-    ctl["changed"] = core.now_ms()
-    core.save_json(demo.CONTROL_PATH, ctl)
-    with CACHE_LOCK:
-        CACHE.pop("demo", None)
-    log.info(f"Bybit DEMO execution {'ARMED' if ctl['armed'] else 'disarmed'} from the website")
-    return jresp({"ok": True, "armed": ctl["armed"]})
+    d = cfg_now().get(kind, {})
+    if not d.get("api_key"):
+        return jresp({"error": f"add your {kind} api_key / api_secret to config.json first"}, 400)
+    arm = bool(j.get("armed"))
+    if arm and kind == "live":
+        if str(j.get("confirm", "")).strip().upper() != "LIVE":
+            return jresp({"error": "type LIVE to confirm real-money trading"}, 400)
+        try:  # the key must work for USDT perpetuals before we arm
+            cl = ex.BybitPrivate(d["api_key"], d["api_secret"], d.get("_test_host") or ex.HOSTS["live"])
+            w = cl.wallet()
+            cl.positions()
+        except Exception as e:
+            return jresp({"error": f"API check failed - not armed: {e}"}, 400)
+        log.warning(f"REAL-MONEY trading ARMED from the website (USDT balance ${w['usdt_wallet']:.2f})")
+    _ctl_update(kind, armed=arm, changed=core.now_ms())
+    log.info(f"{kind.upper()} execution {'ARMED' if arm else 'disarmed'} from the website")
+    return jresp({"ok": True, "armed": arm})
 
 
-@app.route("/api/demo/flatten", methods=["POST"])
-def api_demo_flatten():
+@app.route("/api/exec/<kind>/flatten", methods=["POST"])
+def api_exec_flatten(kind):
+    kind = _kind(kind)
     j = request.get_json(force=True, silent=True) or {}
-    ok, why = _pin_ok(j.get("pin"))
+    ok, why = _pin_ok(kind, j.get("pin"))
     if not ok:
         return jresp({"error": why}, 403)
-    ctl = core.read_json(demo.CONTROL_PATH, {}) or {}
-    ctl["armed"] = False
-    ctl["flatten_req"] = core.now_ms()
-    core.save_json(demo.CONTROL_PATH, ctl)
-    with CACHE_LOCK:
-        CACHE.pop("demo", None)
-    log.info("Bybit DEMO: flatten requested from the website (and disarmed)")
+    _ctl_update(kind, armed=False, flatten_req=core.now_ms())
+    log.warning(f"{kind.upper()}: flatten requested from the website (and disarmed)")
+    return jresp({"ok": True})
+
+
+@app.route("/api/exec/<kind>/reset", methods=["POST"])
+def api_exec_reset(kind):
+    kind = _kind(kind)
+    j = request.get_json(force=True, silent=True) or {}
+    ok, why = _pin_ok(kind, j.get("pin"))
+    if not ok:
+        return jresp({"error": why}, 403)
+    _ctl_update(kind, reset_halt=core.now_ms())
+    log.warning(f"{kind.upper()}: halt reset from the website")
     return jresp({"ok": True})
 
 

@@ -83,11 +83,12 @@ def clean_config():
             d[k] = "<set>" if v.strip() else "<empty>"
     if isinstance(cfg.get("web"), dict) and cfg["web"].get("password"):
         cfg["web"]["password"] = "<set>"
-    dm = cfg.get("demo")
-    if isinstance(dm, dict):
-        for k in ("api_key", "api_secret", "arm_pin"):
-            if dm.get(k):
-                dm[k] = "<set>"
+    for blk in ("demo", "live"):
+        dm = cfg.get(blk)
+        if isinstance(dm, dict):
+            for k in ("api_key", "api_secret", "arm_pin"):
+                if dm.get(k):
+                    dm[k] = "<set>"
     return json.dumps(cfg, indent=2)
 
 

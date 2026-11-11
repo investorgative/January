@@ -152,6 +152,23 @@ DEFAULT_CONFIG = {
         "arm_pin": "",            # PIN required to arm / disarm / flatten from the website
         "leverage": 10,           # leverage set on the demo account (cap for position size)
         "capital_usd": 0,         # 0 = size from the demo USDT balance, >0 = size as if the account had at most this
+        "risk_pct": 0,            # 0 = use the risk from the website header
+        "allow_min_size": {"BTCUSDT": False, "SOLUSDT": False},
+        "symbols": ["BTCUSDT", "SOLUSDT"],
+    },
+    "live": {                     # REAL MONEY on bybit.com (global), USDT perpetuals. Arm only on purpose.
+        "enabled": False,         # keep False - arm from the website (PIN + typing LIVE)
+        "api_key": "",            # bybit.com key: Contract -> Orders + Positions. NEVER enable withdrawals.
+        "api_secret": "",
+        "arm_pin": "",            # PIN for ARM / DISARM / FLATTEN / RESET HALT (use a different one than demo)
+        "risk_pct": 10.0,         # risk per trade in % of the USDT balance (1 R, fees included)
+        "leverage": 20,           # leverage set on Bybit; caps the position size (BTC minimum needs ~10x on $8)
+        "capital_usd": 0,         # 0 = whole USDT balance, >0 = size as if the account had at most this
+        "max_loss_per_trade": 1.50,   # HARD cap: entry skipped if the loss at the stop (incl. fees) would exceed this
+        "max_daily_loss": 3.00,       # no new entries for the rest of the day after this realised loss
+        "min_equity": 3.00,           # HALT (PIN reset needed) if equity drops below this
+        "allow_min_size": {"BTCUSDT": True, "SOLUSDT": True},  # trade Bybit's minimum size if the risk % is smaller
+        "symbols": ["BTCUSDT", "SOLUSDT"],
     },
     "discord": {
         "BTCUSDT": "",

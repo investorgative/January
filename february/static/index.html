@@ -66,7 +66,10 @@ header.top::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height
 .mode{display:flex;border:1px solid var(--line2);border-radius:11px;overflow:hidden;background:rgba(8,12,20,.7)}
 .mode button{background:transparent;border:0;color:var(--mut);padding:8px 13px;font:600 11.5px var(--mono);letter-spacing:.1em;cursor:pointer;transition:all .2s}
 .mode button.on{background:linear-gradient(180deg,rgba(199,155,255,.2),rgba(199,155,255,.04));color:var(--ice);box-shadow:inset 0 -2px 0 var(--ice)}
-.mode button.live{color:var(--dim)}.mode button.live.on{color:var(--am);background:rgba(255,192,98,.1);box-shadow:inset 0 -2px 0 var(--am)}
+.mode button.live{color:var(--mut)}.mode button.live.on{color:var(--rd);background:rgba(255,92,122,.1);box-shadow:inset 0 -2px 0 var(--rd)}
+.mode button.live.hot{color:#fff;background:linear-gradient(180deg,rgba(255,92,122,.55),rgba(255,92,122,.25));animation:armglow 2.4s ease-in-out infinite}
+#livebar{border-top:1px solid rgba(255,92,122,.4)!important;background:repeating-linear-gradient(135deg,rgba(255,92,122,.07) 0 12px,transparent 12px 24px)!important}
+.armed.live.on{color:#fff;background:rgba(255,92,122,.25);border-color:rgba(255,92,122,.7);box-shadow:0 0 18px rgba(255,92,122,.35)}
 .iconbtn{width:34px;height:34px;border-radius:10px;border:1px solid var(--line2);background:rgba(11,17,27,.8);color:var(--mut);cursor:pointer;font-size:15px}
 .iconbtn.on{color:var(--ice);border-color:rgba(199,155,255,.4)}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--dim);margin-right:6px;vertical-align:middle}
@@ -328,7 +331,7 @@ footer{font:11px var(--mono);color:var(--dim);text-align:center;padding:24px}
       <button data-m="paper" class="on">● PAPER</button>
       <button data-m="backtest">BACKTEST</button>
       <button data-m="demo" class="demo">DEMO</button>
-      <button data-m="live" class="live">LIVE 🔒</button>
+      <button data-m="live" class="live" id="liveBtn">LIVE</button>
     </div>
   </div>
   <div class="ctrl">
@@ -355,15 +358,18 @@ footer{font:11px var(--mono);color:var(--dim);text-align:center;padding:24px}
   </div>
   <div id="livebar">
     <div class="lrow">
-      <b class="am">LIVE EXECUTION MODULE</b>
-      <span class="chip"><span class="k">STATUS</span><span class="am">STAGED · NOT IMPLEMENTED</span></span>
-      <span class="chip"><span class="k">EXCHANGE</span>Bybit UTA · linear perps</span>
-      <span class="chip"><span class="k">API KEY</span>— not configured —</span>
-      <span class="chip"><span class="k">WALLET</span>—</span>
-      <span class="chip"><span class="k">MARGIN</span>isolated · one-way</span>
-      <span class="chip"><span class="k">ROUTING</span>market in · stop-market out · trailing via amend</span>
-      <span class="chip"><span class="k">KILL-SWITCH</span>—</span>
-      <button class="btn" disabled>ARM LIVE TRADING</button>
+      <b style="color:var(--rd)">BYBIT LIVE · REAL MONEY</b>
+      <span class="armed off" id="lbArmed">● DISARMED</span>
+      <span class="chip"><span class="k">API</span><span id="lbApi">—</span></span>
+      <span class="chip"><span class="k">USDT</span><b id="lbBal">—</b></span>
+      <span class="chip"><span class="k">TODAY</span><span id="lbDay">—</span></span>
+      <span class="chip"><span class="k">uPnL</span><span id="lbUpnl">—</span></span>
+      <span class="chip"><span class="k">LIMITS</span><span id="lbLim">—</span></span>
+      <span class="chip"><span class="k">LAST</span><span id="lbLast">—</span></span>
+      <button class="btn" id="lbArm">ARM LIVE</button>
+      <button class="btn" id="lbFlat">FLATTEN</button>
+      <button class="btn hide" id="lbReset">RESET HALT</button>
+      <a class="btn sm" href="#live" style="text-decoration:none">DETAILS</a>
     </div>
   </div>
   <div id="demobar">
@@ -384,7 +390,7 @@ footer{font:11px var(--mono);color:var(--dim);text-align:center;padding:24px}
   <nav class="sec" id="nav">
     <a href="#overview">01 OVERVIEW</a><a href="#chart">02 CHART</a><a href="#status">03 STATUS</a>
     <a href="#positions">04 POSITIONS</a><a href="#trades">05 TRADES</a><a href="#journal">06 JOURNAL</a>
-    <a href="#backtest">07 BACKTEST</a><a href="#lab">08 LAB</a><a href="#optimizer">09 OPTIMIZER</a><a href="#demo">10 BYBIT DEMO</a><a href="#log">11 LOG</a>
+    <a href="#backtest">07 BACKTEST</a><a href="#lab">08 LAB</a><a href="#optimizer">09 OPTIMIZER</a><a href="#demo">10 BYBIT DEMO</a><a href="#live">11 BYBIT LIVE</a><a href="#log">12 LOG</a>
   </nav>
 </header>
 
@@ -540,8 +546,24 @@ footer{font:11px var(--mono);color:var(--dim);text-align:center;padding:24px}
       <div><div class="sub">executor log</div><div class="tw" style="max-height:520px;padding:4px 8px" id="dmAct"></div></div>
     </div>
     <div class="sub">closed pnl reported by bybit</div><div class="tw" style="max-height:340px"><table id="dmClosed"></table></div>
-    <div class="small" style="margin-top:10px;line-height:1.7">Orders go only to <b>api-demo.bybit.com</b> (demo funds). Real-money trading is not implemented. ARM / DISARM / FLATTEN need the PIN from config.json.
+    <div class="small" style="margin-top:10px;line-height:1.7">Orders go only to <b>api-demo.bybit.com</b> (demo funds), independent of the LIVE executor. ARM / DISARM / FLATTEN need the demo PIN from config.json.
       Sizing: risk % from the header × demo USDT balance (or <code>capital_usd</code>). While armed, positions on BTCUSDT / SOLUSDT that the engine does not hold are closed.</div>
+  </div>
+</section>
+
+<section id="live" class="reveal">
+  <h2><span style="color:var(--rd)">Bybit live account · real money</span><span class="r mut" id="lvSub"></span></h2>
+  <div class="card" style="border-color:rgba(255,92,122,.3)">
+    <div id="lvSetup" class="hint hide"></div>
+    <div class="dgrid" id="lvKpis"></div>
+    <div class="twocol">
+      <div><div class="sub">positions on bybit</div><div class="tw" style="max-height:260px"><table id="lvPos"></table></div>
+           <div class="sub">open orders</div><div class="tw" style="max-height:220px"><table id="lvOrd"></table></div></div>
+      <div><div class="sub">executor log</div><div class="tw" style="max-height:520px;padding:4px 8px" id="lvAct"></div></div>
+    </div>
+    <div class="sub">closed pnl reported by bybit</div><div class="tw" style="max-height:340px"><table id="lvClosed"></table></div>
+    <div class="small" style="margin-top:10px;line-height:1.7">Orders go to <b>api.bybit.com</b> (your real USDT perpetual account). Before every entry the hard limits are checked:
+      loss at stop per trade, daily loss stop, equity floor (halt), free margin. ARM needs the PIN and typing LIVE. FLATTEN closes everything and disarms.</div>
   </div>
 </section>
 
@@ -549,7 +571,7 @@ footer{font:11px var(--mono);color:var(--dim);text-align:center;padding:24px}
   <h2>Log<span class="r"><span class="tg on" id="logFollow">follow</span><span class="tg" id="logErr">errors only</span></span></h2>
   <div class="log" id="logBox"></div>
 </section>
-<footer>💜 FEBRUARY · paper trading only · data: Bybit public API · <span id="ver"></span></footer>
+<footer>💜 FEBRUARY · paper + Bybit demo / live execution · data: Bybit public API · <span id="ver"></span></footer>
 </main>
 <div class="toast" id="toast"></div><div class="sweep" id="sweep"></div>
 
@@ -610,7 +632,7 @@ setInterval(clock,1000);clock();
 
 /* ---------------- mode / account / toggles */
 function setMode(m){if(m==='demo'){$('#demobar').classList.toggle('show');$$('#modeSw button[data-m=demo]').forEach(b=>b.classList.toggle('on',$('#demobar').classList.contains('show')));loadDemo();return}
-  if(m==='live'){$('#livebar').classList.toggle('show');$$('#modeSw button').forEach(b=>b.classList.toggle('on',b.dataset.m==='live'?$('#livebar').classList.contains('show'):b.dataset.m===S.mode));return}
+  if(m==='live'){loadDemo();$('#livebar').classList.toggle('show');$$('#modeSw button').forEach(b=>b.classList.toggle('on',b.dataset.m==='live'?$('#livebar').classList.contains('show'):b.dataset.m===S.mode));return}
   S.mode=m;S.tf=m==='backtest'?'60':'15';$$('#tfSw button').forEach(b=>b.classList.toggle('on',b.dataset.t===S.tf));$$('#modeSw button').forEach(b=>b.classList.toggle('on',b.dataset.m===m||(b.dataset.m==='live'&&$('#livebar').classList.contains('show'))||(b.dataset.m==='demo'&&$('#demobar').classList.contains('show'))));
   $('#btBanner').classList.toggle('show',m==='backtest');S.chartFit=true;S.tradeIds=new Set();S.firstLoad=true;S.jweekEnd=null;S.jsel=null;
   $('#ovTitle').textContent=m==='backtest'?'Backtest account':'Live paper account';refreshAll()}
@@ -933,31 +955,49 @@ window.labApply=async id=>{const r=LAB.runs.find(x=>x.id===id);if(!confirm('Appl
   try{await jpost('api/lab/apply',{id});toast('applied - paper trader rebuilds itself');LAB.cur={};loadLab();loadStatus()}catch(e){toast(e.message,'var(--rd)')}};
 window.labDel=async id=>{await jpost('api/lab/delete',{id});loadLab()};
 
-/* ---------------- bybit demo */
-const DM={};
-async function loadDemo(){try{const d=await api('api/demo');Object.assign(DM,d);renderDemo(d)}catch(e){}}
-function renderDemo(d){const a=$('#dbArmed');a.className='armed '+(d.armed?'on':'off');a.textContent=d.armed?'● ARMED':'● DISARMED';
-  $('#dbArm').textContent=d.armed?'DISARM':'ARM';$('#dbArm').className='btn'+(d.armed?'':' pri');
-  $('#dbApi').innerHTML=!d.configured?'<span class="am">no keys</span>':d.api_ok?'<span class="pos">connected</span>':`<span class="neg" title="${esc(d.error)}">error</span>`;
-  const w=d.wallet||{};$('#dbBal').textContent=w.usdt_wallet!=null?usd(w.usdt_wallet):'—';$('#dbUpnl').innerHTML=w.upnl!=null?`<span class="${cls(w.upnl)}">${susd(w.upnl)}</span>`:'—';
-  $('#dbPos').textContent=(d.positions||[]).length;const la=(d.actions||[])[0];$('#dbLast').textContent=la?`${la.sym} ${la.what} · ${tfmt(la.ts)}`:'—';
-  $('#dmSub').textContent=d.configured?(d.armed?'armed - mirroring every February trade':'disarmed - nothing is sent'):'not configured';
-  const su=$('#dmSetup');su.classList.toggle('hide',d.configured&&d.pin_set);
-  su.innerHTML=`<b class="ice">Setup</b><br>1. bybit.com → switch to <b>Demo Trading</b> → avatar → <b>API</b> → create a key (system-generated, permissions: Contract → Orders + Positions).<br>
-   2. On the Pi: <code>nano ~/january/february/config.json</code> → <code>"demo": {"api_key": "...", "api_secret": "...", "arm_pin": "a PIN you choose"}</code><br>3. <code>./stop.sh && ./start.sh</code>, then press ARM here.`
-   +(d.configured&&!d.pin_set?'<br><span class="am">Keys found - set an arm_pin to enable ARM.</span>':'');
+/* ---------------- bybit execution (demo + live) */
+const EX={demo:{},live:{}};
+const PFX={demo:{bar:'db',sec:'dm'},live:{bar:'lb',sec:'lv'}};
+async function loadExec(kind){try{const d=await api('api/exec/'+kind);EX[kind]=d;renderExec(kind,d)}catch(e){}}
+function loadDemo(){loadExec('demo');loadExec('live')}
+function renderExec(kind,d){const P=PFX[kind],B=P.bar,X=P.sec,live=kind==='live';
+  const a=$('#'+B+'Armed');a.className='armed '+(live?'live ':'')+(d.armed?'on':'off');a.textContent=d.halted?'● HALTED':d.armed?'● ARMED':'● DISARMED';
+  const arm=$('#'+B+'Arm');arm.textContent=d.armed?'DISARM':(live?'ARM LIVE':'ARM');arm.className='btn'+(d.armed?'':' pri');
+  if(live){$('#liveBtn').classList.toggle('hot',!!d.armed);$('#liveBtn').textContent=d.armed?'● LIVE':'LIVE';$('#lbReset').classList.toggle('hide',!d.halted);
+    const L=d.limits||{};$('#lbLim').textContent=`${fmt(L.risk_pct,0)}% · max $${fmt(L.max_loss_per_trade)}/trade · day -$${fmt(L.max_daily_loss)} · floor $${fmt(L.min_equity)}`;
+    $('#lbDay').innerHTML=d.day_pnl!=null?`<span class="${cls(d.day_pnl)}">${susd(d.day_pnl)}</span>`:'—'}
+  $('#'+B+'Api').innerHTML=!d.configured?'<span class="am">no keys</span>':d.api_ok?'<span class="pos">connected</span>':`<span class="neg" title="${esc(d.error)}">error</span>`;
+  const w=d.wallet||{};$('#'+B+'Bal').textContent=w.usdt_wallet!=null?usd(w.usdt_wallet):'—';$('#'+B+'Upnl').innerHTML=w.upnl!=null?`<span class="${cls(w.upnl)}">${susd(w.upnl)}</span>`:'—';
+  if($('#'+B+'Pos'))$('#'+B+'Pos').textContent=(d.positions||[]).length;
+  const la=(d.actions||[])[0];$('#'+B+'Last').textContent=la?`${la.sym} ${la.what} · ${tfmt(la.ts)}`:'—';
+  $('#'+X+'Sub').textContent=d.configured?(d.halted?'HALTED - '+d.halted:d.armed?'armed - mirroring every February trade':'disarmed - nothing is sent'):'not configured';
+  const su=$('#'+X+'Setup');su.classList.toggle('hide',d.configured&&d.pin_set);
+  su.innerHTML=live?`<b style="color:var(--rd)">Setup (real money)</b><br>1. bybit.com → avatar → <b>API</b> → create a <b>system-generated</b> key, permissions <b>Contract → Orders + Positions</b> only. <b>Never</b> enable withdrawals or transfers. Bind it to your Pi's IP if you can.<br>
+     2. <code>nano ~/january/february/config.json</code> → <code>"live": {"api_key": "...", "api_secret": "...", "arm_pin": "a different PIN"}</code><br>3. <code>./stop.sh && ./start.sh</code>, then press LIVE in the header → ARM LIVE.`
+   :`<b class="ice">Setup</b><br>1. bybit.com → switch to <b>Demo Trading</b> → avatar → <b>API</b> → create a key (Contract → Orders + Positions).<br>
+     2. <code>nano ~/january/february/config.json</code> → <code>"demo": {"api_key": "...", "api_secret": "...", "arm_pin": "a PIN"}</code><br>3. <code>./stop.sh && ./start.sh</code>, then press DEMO → ARM.`;
+  if(d.configured&&!d.pin_set)su.innerHTML+='<br><span class="am">Keys found - set an arm_pin to enable ARM.</span>';
   const closed=d.closed||[];const sumC=closed.reduce((a,b)=>a+b.pnl,0);const wins=closed.filter(c=>c.pnl>0).length;
-  $('#dmKpis').innerHTML=[['Status',d.armed?'<span class="pos">ARMED</span>':'<span class="mut">DISARMED</span>'],['USDT balance',w.usdt_wallet!=null?usd(w.usdt_wallet):'—'],['Total equity',w.equity!=null?usd(w.equity):'—'],
-    ['Unrealized',w.upnl!=null?`<span class="${cls(w.upnl)}">${susd(w.upnl)}</span>`:'—'],['Closed PnL (last 50)',`<span class="${cls(sumC)}">${susd(sumC)}</span>`],['Closed fills · wins',`${closed.length} · ${wins}`],
-    ['Leverage cap',fmt(d.leverage,0)+'×'],['Sizing base',d.capital_usd?('cap '+usd(d.capital_usd)):'USDT balance']].map(([k,v])=>`<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
-  const P=d.positions||[];$('#dmPos').innerHTML=P.length?'<tr><th>Symbol</th><th>Side</th><th>Size</th><th>Entry</th><th>Mark</th><th>Stop</th><th>uPnL</th><th>Engine</th></tr>'+P.map(p=>{const m=(d.mirror||{})[p.sym];return `<tr><td>${p.sym}</td><td><span class="tag ${p.dir===1?'L':'S'}">${p.side==='Buy'?'LONG':'SHORT'}</span></td><td>${p.size}</td><td>${pxd(p.entry)}</td><td>${pxd(p.mark)}</td><td class="ice">${p.sl?pxd(p.sl):'<span class="neg">none!</span>'}</td><td class="${cls(p.upnl)}">${susd(p.upnl)}</td><td>${m?'<span class="pos">mirrored</span>':'<span class="am">not from engine</span>'}</td></tr>`}).join(''):'<tr><td class="empty">flat on the demo account</td></tr>';
-  const O=d.orders||[];$('#dmOrd').innerHTML=O.length?'<tr><th>Symbol</th><th>Side</th><th>Type</th><th>Price</th><th>Qty</th><th>Tag</th></tr>'+O.map(o=>`<tr><td>${o.sym}</td><td>${o.side}</td><td>${o.type}${o.reduce?' · RO':''}</td><td>${pxd(o.price)}</td><td>${o.qty}</td><td class="mut">${esc((o.link||'').split('-').pop())}</td></tr>`).join(''):'<tr><td class="empty">no open orders</td></tr>';
-  $('#dmAct').innerHTML=(d.actions||[]).length?(d.actions||[]).map(a=>`<div class="dact ${a.ok?'':'bad'}"><span class="mut">${tfmt(a.ts)}</span><span>${a.sym}</span><span><span class="w">${esc(a.what)}</span> <span class="mut">${esc(a.detail)}</span></span></div>`).join(''):'<div class="empty">no executor actions yet</div>';
-  $('#dmClosed').innerHTML=closed.length?'<tr><th>Closed</th><th>Symbol</th><th>Side</th><th>Qty</th><th>Entry</th><th>Exit</th><th>PnL</th></tr>'+closed.map(c=>`<tr><td>${tfmt(c.ts)}</td><td>${c.sym}</td><td>${c.side==='Sell'?'close long':'close short'}</td><td>${c.qty}</td><td>${pxd(c.entry)}</td><td>${pxd(c.exit)}</td><td class="${cls(c.pnl)}">${susd(c.pnl)}</td></tr>`).join(''):'<tr><td class="empty">no closed demo trades yet</td></tr>'}
-async function demoPost(url,body,msg){const pin=prompt('PIN (demo.arm_pin from config.json)');if(pin==null)return;
-  try{await api(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({pin},body))});toast(msg,'var(--gr)');sweep();setTimeout(loadDemo,800)}catch(e){toast(e.message,'var(--rd)')}}
-$('#dbArm').onclick=()=>{const arm=!DM.armed;if(arm&&!confirm('ARM Bybit DEMO execution?\n\nFrom the next February entry on, orders are sent to your Bybit DEMO account (paper money). Real money is never touched.'))return;demoPost('api/demo/arm',{armed:arm},arm?'demo execution ARMED':'demo execution disarmed')};
-$('#dbFlat').onclick=()=>{if(!confirm('Close all February positions on the Bybit DEMO account and disarm?'))return;demoPost('api/demo/flatten',{},'flatten requested - closing within seconds')};
+  const k=[['Status',d.halted?'<span class="neg">HALTED</span>':d.armed?`<span class="${live?'neg':'pos'}">ARMED</span>`:'<span class="mut">DISARMED</span>'],['USDT balance',w.usdt_wallet!=null?usd(w.usdt_wallet):'—'],['Total equity',w.equity!=null?usd(w.equity):'—'],
+    ['Unrealized',w.upnl!=null?`<span class="${cls(w.upnl)}">${susd(w.upnl)}</span>`:'—'],['Closed PnL (last 50)',`<span class="${cls(sumC)}">${susd(sumC)}</span>`],['Closed fills · wins',`${closed.length} · ${wins}`],['Leverage cap',fmt(d.leverage,0)+'×']];
+  if(live){const L=d.limits||{};k.push(['Today',d.day_pnl!=null?`<span class="${cls(d.day_pnl)}">${susd(d.day_pnl)}</span>`:'—'],['Risk / trade',fmt(L.risk_pct,1)+'%'],['Max loss / trade','$'+fmt(L.max_loss_per_trade)],['Daily loss stop','-$'+fmt(L.max_daily_loss)],['Equity floor','$'+fmt(L.min_equity)])}
+  else k.push(['Sizing base',d.capital_usd?('cap '+usd(d.capital_usd)):'USDT balance']);
+  $('#'+X+'Kpis').innerHTML=k.map(([a,v])=>`<div class="kpi"><div class="k">${a}</div><div class="v">${v}</div></div>`).join('');
+  const PS=d.positions||[];$('#'+X+'Pos').innerHTML=PS.length?'<tr><th>Symbol</th><th>Side</th><th>Size</th><th>Entry</th><th>Mark</th><th>Stop</th><th>Liq.</th><th>uPnL</th><th>Engine</th></tr>'+PS.map(p=>{const m=(d.mirror||{})[p.sym];return `<tr><td>${p.sym}</td><td><span class="tag ${p.dir===1?'L':'S'}">${p.side==='Buy'?'LONG':'SHORT'}</span></td><td>${p.size}</td><td>${pxd(p.entry)}</td><td>${pxd(p.mark)}</td><td class="ice">${p.sl?pxd(p.sl):'<span class="neg">none!</span>'}</td><td class="mut">${p.liq?pxd(p.liq):'—'}</td><td class="${cls(p.upnl)}">${susd(p.upnl)}</td><td>${m?'<span class="pos">mirrored</span>':'<span class="am">not from engine</span>'}</td></tr>`}).join(''):'<tr><td class="empty">flat</td></tr>';
+  const O=d.orders||[];$('#'+X+'Ord').innerHTML=O.length?'<tr><th>Symbol</th><th>Side</th><th>Type</th><th>Price</th><th>Qty</th><th>Tag</th></tr>'+O.map(o=>`<tr><td>${o.sym}</td><td>${o.side}</td><td>${o.type}${o.reduce?' · RO':''}</td><td>${pxd(o.price)}</td><td>${o.qty}</td><td class="mut">${esc((o.link||'').split('-').pop())}</td></tr>`).join(''):'<tr><td class="empty">no open orders</td></tr>';
+  $('#'+X+'Act').innerHTML=(d.actions||[]).length?(d.actions||[]).map(a=>`<div class="dact ${a.ok?'':'bad'}"><span class="mut">${tfmt(a.ts)}</span><span>${a.sym}</span><span><span class="w">${esc(a.what)}</span> <span class="mut">${esc(a.detail)}</span></span></div>`).join(''):'<div class="empty">no executor actions yet</div>';
+  $('#'+X+'Closed').innerHTML=closed.length?'<tr><th>Closed</th><th>Symbol</th><th>Side</th><th>Qty</th><th>Entry</th><th>Exit</th><th>PnL</th></tr>'+closed.map(c=>`<tr><td>${tfmt(c.ts)}</td><td>${c.sym}</td><td>${c.side==='Sell'?'close long':'close short'}</td><td>${c.qty}</td><td>${pxd(c.entry)}</td><td>${pxd(c.exit)}</td><td class="${cls(c.pnl)}">${susd(c.pnl)}</td></tr>`).join(''):'<tr><td class="empty">no closed trades yet</td></tr>'}
+async function execPost(kind,action,body,msg){const pin=prompt(`PIN (${kind}.arm_pin from config.json)`);if(pin==null)return;
+  try{await api(`api/exec/${kind}/${action}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({pin},body))});toast(msg,kind==='live'?'var(--rd)':'var(--gr)');sweep();setTimeout(()=>loadExec(kind),900)}catch(e){toast(e.message,'var(--rd)')}}
+$('#dbArm').onclick=()=>{const arm=!EX.demo.armed;if(arm&&!confirm('ARM Bybit DEMO execution?\n\nFrom the next February entry on, orders are sent to your Bybit DEMO account (paper money).'))return;execPost('demo','arm',{armed:arm},arm?'demo execution ARMED':'demo execution disarmed')};
+$('#dbFlat').onclick=()=>{if(!confirm('Close all February positions on the Bybit DEMO account and disarm?'))return;execPost('demo','flatten',{},'demo flatten requested')};
+$('#lbArm').onclick=()=>{const arm=!EX.live.armed;
+  if(!arm){execPost('live','arm',{armed:false},'LIVE trading disarmed');return}
+  const L=EX.live.limits||{};const c=prompt(`REAL MONEY.\n\nFrom the next February entry on, orders go to your bybit.com account.\nRisk ${L.risk_pct}% per trade · max $${L.max_loss_per_trade} loss per trade · daily stop -$${L.max_daily_loss} · halt below $${L.min_equity}.\n\nType LIVE to continue:`);
+  if(c==null)return;if(c.trim().toUpperCase()!=='LIVE'){toast('not armed - you did not type LIVE','var(--am)');return}
+  execPost('live','arm',{armed:true,confirm:'LIVE'},'LIVE trading ARMED')};
+$('#lbFlat').onclick=()=>{if(!confirm('Close ALL February positions on your REAL Bybit account at market and disarm?'))return;execPost('live','flatten',{},'live flatten requested')};
+$('#lbReset').onclick=()=>{if(!confirm('Reset the halt? February may open new live trades again.'))return;execPost('live','reset',{},'halt reset')};
 
 /* ---------------- boot */
 function refreshAll(){loadStatus();loadBundle();loadChart();loadLog()}

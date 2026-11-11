@@ -20,7 +20,7 @@ import time
 from collections import deque
 
 import february_core as core
-from february_demo import DemoExecutor, DEMO_HOST
+from february_exec import Executor
 from february_backtest import warmup_ms
 
 EVENTS_PATH = os.path.join(core.DATA_DIR, "events.json")
@@ -47,7 +47,7 @@ class Trader:
         self.tick = {}
         self.fund_rate = {}
         self.tick_fail, self.kline_fail = {}, {}
-        self.demo = DemoExecutor(self.cfg, self.log, host=self.cfg.get("demo", {}).get("_test_host", DEMO_HOST))
+        self.execs = [Executor(k, self.cfg, self.log) for k in ("demo", "live")]
         self.engines = {}
         self.cfg_mtime = os.path.getmtime(core.CONFIG_PATH) if os.path.exists(core.CONFIG_PATH) else 0
         self.strategy_sig = json.dumps(self.cfg["strategy"], sort_keys=True)
@@ -132,7 +132,8 @@ class Trader:
                 self.add_event(e)
                 self.save()
                 self.notify("open", sym, ps)
-                self.demo.on_open(sym, ps, (self.tick.get(sym) or {}).get("last"), core.load_settings(self.cfg), self.trades)
+                for ex in self.execs:
+                    ex.on_open(sym, ps, (self.tick.get(sym) or {}).get("last"), core.load_settings(self.cfg), self.trades)
             elif t == "close":
                 ps = e["pos"]
                 rec = core.trade_record(ps)
@@ -144,7 +145,8 @@ class Trader:
                 self.add_event(dict(e, r=r))
                 self.save()
                 self.notify("close", sym, rec)
-                self.demo.on_close(sym, rec.get("reason"))
+                for ex in self.execs:
+                    ex.on_close(sym, rec.get("reason"))
             elif t == "trail":
                 ps = self.engines[sym].pos
                 self.log.info(f"{sym} stop trailed to {e['sl']:.6g}")
@@ -152,7 +154,8 @@ class Trader:
                 self.save()
                 if ps:
                     self.notify("trail", sym, ps)
-                self.demo.on_trail(sym, e["sl"])
+                for ex in self.execs:
+                    ex.on_trail(sym, e["sl"])
             elif t == "partial":
                 self.log.info(f"{sym} partial take-profit @ {e['price']:.6g}")
                 self.add_event(dict(e, msg="partial take-profit"))
@@ -278,8 +281,9 @@ class Trader:
         new = core.load_config()
         sig = json.dumps(new["strategy"], sort_keys=True)
         self.cfg = new
-        self.demo.save()
-        self.demo = DemoExecutor(new, self.log, host=new.get("demo", {}).get("_test_host", DEMO_HOST))
+        for ex in self.execs:
+            ex.save()
+        self.execs = [Executor(k, new, self.log) for k in ("demo", "live")]
         if sig != self.strategy_sig:
             self.strategy_sig = sig
             self.log.info("strategy parameters changed - rebuilding engines (open positions are kept)")
@@ -303,7 +307,8 @@ class Trader:
                     last_tick = time.time()
                 self.process_bars()
                 self.check_config()
-                self.demo.tick(self.engines)
+                for ex in self.execs:
+                    ex.tick(self.engines)
                 if time.time() - last_save >= 10:
                     self.save()
                     last_save = time.time()

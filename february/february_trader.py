@@ -20,6 +20,7 @@ import time
 from collections import deque
 
 import february_core as core
+from february_demo import DemoExecutor, DEMO_HOST
 from february_backtest import warmup_ms
 
 EVENTS_PATH = os.path.join(core.DATA_DIR, "events.json")
@@ -45,6 +46,8 @@ class Trader:
         self.last_bar = {}
         self.tick = {}
         self.fund_rate = {}
+        self.tick_fail, self.kline_fail = {}, {}
+        self.demo = DemoExecutor(self.cfg, self.log, host=self.cfg.get("demo", {}).get("_test_host", DEMO_HOST))
         self.engines = {}
         self.cfg_mtime = os.path.getmtime(core.CONFIG_PATH) if os.path.exists(core.CONFIG_PATH) else 0
         self.strategy_sig = json.dumps(self.cfg["strategy"], sort_keys=True)
@@ -129,6 +132,7 @@ class Trader:
                 self.add_event(e)
                 self.save()
                 self.notify("open", sym, ps)
+                self.demo.on_open(sym, ps, (self.tick.get(sym) or {}).get("last"), core.load_settings(self.cfg), self.trades)
             elif t == "close":
                 ps = e["pos"]
                 rec = core.trade_record(ps)
@@ -140,6 +144,7 @@ class Trader:
                 self.add_event(dict(e, r=r))
                 self.save()
                 self.notify("close", sym, rec)
+                self.demo.on_close(sym, rec.get("reason"))
             elif t == "trail":
                 ps = self.engines[sym].pos
                 self.log.info(f"{sym} stop trailed to {e['sl']:.6g}")
@@ -147,6 +152,7 @@ class Trader:
                 self.save()
                 if ps:
                     self.notify("trail", sym, ps)
+                self.demo.on_trail(sym, e["sl"])
             elif t == "partial":
                 self.log.info(f"{sym} partial take-profit @ {e['price']:.6g}")
                 self.add_event(dict(e, msg="partial take-profit"))
@@ -207,8 +213,16 @@ class Trader:
                         ps["exit_maker"] = True
                         eng.close(core.now_ms(), tp, "take profit")
                         self.handle(sym, eng.events)
-            except Exception:
-                self.log.exception(f"{sym}: ticker poll failed")
+                self.tick_fail[sym] = 0
+            except Exception as e:
+                # single failures happen (Bybit / internet blips) and heal on the next poll 5 s later.
+                # Only a persistent outage (~1 min) is an ERROR that goes to Discord.
+                n = self.tick_fail.get(sym, 0) + 1
+                self.tick_fail[sym] = n
+                if n == 12:
+                    self.log.error(f"{sym}: ticker unreachable for ~1 min ({e})")
+                elif n < 12:
+                    self.log.warning(f"{sym}: ticker poll failed ({n}x), retrying: {e}")
 
     def process_bars(self):
         for sym in self.syms:
@@ -220,8 +234,11 @@ class Trader:
                 continue
             try:
                 rows = self.api.klines(sym, "15", limit=6)
-            except Exception:
-                self.log.exception(f"{sym}: kline fetch failed")
+                self.kline_fail[sym] = 0
+            except Exception as e:
+                n = self.kline_fail.get(sym, 0) + 1
+                self.kline_fail[sym] = n
+                (self.log.error if n == 10 else self.log.warning)(f"{sym}: candle fetch failed ({n}x): {e}")
                 continue
             closed = [r for r in rows if r[0] + core.M15 <= core.now_ms() and r[0] > self.last_bar[sym]]
             if not closed:
@@ -261,6 +278,8 @@ class Trader:
         new = core.load_config()
         sig = json.dumps(new["strategy"], sort_keys=True)
         self.cfg = new
+        self.demo.save()
+        self.demo = DemoExecutor(new, self.log, host=new.get("demo", {}).get("_test_host", DEMO_HOST))
         if sig != self.strategy_sig:
             self.strategy_sig = sig
             self.log.info("strategy parameters changed - rebuilding engines (open positions are kept)")
@@ -284,6 +303,7 @@ class Trader:
                     last_tick = time.time()
                 self.process_bars()
                 self.check_config()
+                self.demo.tick(self.engines)
                 if time.time() - last_save >= 10:
                     self.save()
                     last_save = time.time()

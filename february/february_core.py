@@ -145,6 +145,14 @@ DEFAULT_CONFIG = {
         "include_lab_space": False,
     },
     "web": {"port": 8753, "host": "0.0.0.0", "password": ""},
+    "demo": {                     # Bybit DEMO trading (paper money on your Bybit demo account) - never real money
+        "enabled": False,         # armed at start (the website ARM switch overrides this)
+        "api_key": "",            # key created INSIDE Bybit Demo Trading (avatar -> API)
+        "api_secret": "",
+        "arm_pin": "",            # PIN required to arm / disarm / flatten from the website
+        "leverage": 10,           # leverage set on the demo account (cap for position size)
+        "capital_usd": 0,         # 0 = size from the demo USDT balance, >0 = size as if the account had at most this
+    },
     "discord": {
         "BTCUSDT": "",
         "SOLUSDT": "",

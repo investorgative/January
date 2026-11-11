@@ -252,6 +252,50 @@ tr.new td{animation:rowin 1.6s ease}
 .labbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0 4px}
 .labbar input{background:var(--bg2);border:1px solid var(--line2);color:var(--txt);padding:8px 10px;border-radius:9px;font:12px var(--mono);min-width:220px}
 .sub{font:600 10.5px var(--mono);letter-spacing:.16em;color:var(--mut);margin:16px 0 8px;text-transform:uppercase}
+/* ---- demo */
+.mode button.demo.on{color:var(--gr);background:rgba(61,255,168,.08);box-shadow:inset 0 -2px 0 var(--gr)}
+#demobar{display:none;border-top:1px solid rgba(61,255,168,.3);background:linear-gradient(90deg,rgba(61,255,168,.06),transparent 60%)}
+#demobar.show{display:block}
+.armed{display:inline-flex;align-items:center;gap:7px;font:700 11.5px var(--mono);letter-spacing:.12em;padding:6px 11px;border-radius:9px;border:1px solid var(--line2)}
+.armed.on{color:var(--gr);border-color:rgba(61,255,168,.5);box-shadow:0 0 18px rgba(61,255,168,.18);animation:armglow 2.4s ease-in-out infinite}
+.armed.off{color:var(--mut)}
+@keyframes armglow{50%{box-shadow:0 0 4px rgba(61,255,168,.05)}}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-bottom:14px}
+.dact{font:11.5px var(--mono);border-bottom:1px solid var(--line);padding:6px 4px;display:grid;grid-template-columns:110px 80px 1fr;gap:10px}
+.dact .w{color:var(--txt)}.dact.bad .w{color:var(--rd)}
+.hint{font:12px/1.75 var(--mono);color:var(--mut);background:rgba(255,255,255,.02);border:1px dashed var(--line2);border-radius:12px;padding:12px 14px}
+.hint code{color:var(--ice);background:rgba(199,155,255,.08);padding:1px 5px;border-radius:5px}
+/* ---- spotlight on cards */
+.card{--mx:-500px;--my:-500px}
+.card .spot{position:absolute;inset:0;pointer-events:none;border-radius:16px;background:radial-gradient(320px circle at var(--mx) var(--my),rgba(199,155,255,.07),transparent 60%);z-index:0}
+/* ---- countdown ring + heartbeat */
+.cd{display:inline-flex;align-items:center;gap:7px}
+.cd svg{transform:rotate(-90deg)}
+.cd circle.f{transition:stroke-dashoffset .9s linear}
+.ecg{width:46px;height:14px;vertical-align:middle;margin-left:4px}
+.ecg path{stroke:var(--gr);stroke-width:1.6;fill:none;stroke-dasharray:90;stroke-dashoffset:90;animation:ecg 2.2s linear infinite}
+.ecg.dead path{stroke:var(--dim);animation:none;stroke-dashoffset:0}
+@keyframes ecg{0%{stroke-dashoffset:90}60%{stroke-dashoffset:0}100%{stroke-dashoffset:-90}}
+/* ---- zone ladder + gauge in status cards */
+.stwrap{display:grid;grid-template-columns:1fr 132px;gap:14px;align-items:start}
+@media(max-width:560px){.stwrap{grid-template-columns:1fr}}
+.ladder{position:relative;height:250px;border-radius:12px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(199,155,255,.03),rgba(143,180,255,.02));overflow:hidden}
+.ladder .z{position:absolute;left:6px;right:6px;border-radius:4px;background:linear-gradient(90deg,rgba(199,155,255,.22),rgba(143,180,255,.12));border:1px solid rgba(199,155,255,.45);transition:top 1s cubic-bezier(.2,.8,.2,1),height 1s}
+.ladder .z.hot{background:linear-gradient(90deg,rgba(255,192,98,.28),rgba(255,192,98,.1));border-color:rgba(255,192,98,.75)}
+.ladder .z span{position:absolute;right:4px;top:50%;transform:translateY(-50%);font:9.5px var(--mono);color:rgba(230,215,255,.85)}
+.ladder .lv{position:absolute;left:0;right:0;height:0;border-top:1px dashed;transition:top 1s cubic-bezier(.2,.8,.2,1)}
+.ladder .lv b{position:absolute;left:4px;top:-12px;font:600 9px var(--mono)}
+.ladder .px{position:absolute;left:0;right:0;height:0;transition:top 1.2s cubic-bezier(.2,.8,.2,1);z-index:3}
+.ladder .px::before{content:"";position:absolute;left:-4px;top:-5px;width:10px;height:10px;border-radius:50%;background:#fff;box-shadow:0 0 14px #fff,0 0 30px var(--ice);animation:pulse 1.6s infinite}
+.ladder .px::after{content:"";position:absolute;left:6px;right:0;top:0;border-top:1px solid rgba(255,255,255,.55)}
+.ladder .px i{position:absolute;right:4px;top:-17px;font:700 10px var(--mono);font-style:normal;color:#fff;background:rgba(7,4,12,.75);padding:1px 5px;border-radius:5px}
+.gauge{text-align:center;margin-top:10px}
+.gauge svg path.f{transition:stroke-dashoffset 1.2s cubic-bezier(.2,.8,.2,1)}
+.gauge .l{font:600 9.5px var(--mono);color:var(--mut);letter-spacing:.12em;margin-top:-6px}
+/* ---- event sweep */
+.sweep{position:fixed;left:0;right:0;top:0;height:2px;z-index:95;pointer-events:none;opacity:0;background:linear-gradient(90deg,transparent,var(--ice),var(--au),transparent)}
+.sweep.go{animation:sw 1.6s ease}
+@keyframes sw{0%{opacity:1;transform:translateX(-100%)}100%{opacity:0;transform:translateX(100%)}}
 .toast{position:fixed;left:50%;top:22px;transform:translateX(-50%) translateY(-20px);z-index:90;background:rgba(15,23,36,.96);border:1px solid var(--ice);color:var(--txt);padding:10px 16px;border-radius:12px;font:12px var(--mono);opacity:0;transition:all .35s;pointer-events:none;box-shadow:var(--glow)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 footer{font:11px var(--mono);color:var(--dim);text-align:center;padding:24px}
@@ -274,8 +318,8 @@ footer{font:11px var(--mono);color:var(--dim);text-align:center;padding:24px}
       <div class="qt" data-sym="BTCUSDT"><span class="s">BTC</span><span class="p" id="pxBTCUSDT">—</span><span class="c" id="chBTCUSDT"></span></div>
       <div class="qt" data-sym="SOLUSDT"><span class="s">SOL</span><span class="p" id="pxSOLUSDT">—</span><span class="c" id="chSOLUSDT"></span></div>
       <span class="chip"><span class="k">ENTRY</span><b>15m</b> <span class="k" style="margin-left:6px">S/R</span><b>4h</b></span>
-      <span class="chip"><span class="dot" id="hDot"></span><span id="hEng">CONNECTING</span></span>
-      <span class="chip"><span class="k">NEXT 15M</span><b id="hCd">--:--</b></span>
+      <span class="chip"><span class="dot" id="hDot"></span><span id="hEng">CONNECTING</span><svg class="ecg" id="ecg" viewBox="0 0 46 14"><path d="M0 7h12l3-5 4 10 4-12 3 7h20"/></svg></span>
+      <span class="chip cd"><svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" stroke="#2a2140" stroke-width="2.4" fill="none"/><circle class="f" id="cdArc" cx="9" cy="9" r="7" stroke="#c79bff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-dasharray="43.98" stroke-dashoffset="0"/></svg><span class="k">NEXT 15M</span><b id="hCd">--:--</b></span>
     </div>
     <div class="grow"></div>
     <div class="clock"><div class="t" id="hTime">--:--:--</div><div class="d" id="hDate">—</div></div>
@@ -283,6 +327,7 @@ footer{font:11px var(--mono);color:var(--dim);text-align:center;padding:24px}
     <div class="mode" id="modeSw">
       <button data-m="paper" class="on">● PAPER</button>
       <button data-m="backtest">BACKTEST</button>
+      <button data-m="demo" class="demo">DEMO</button>
       <button data-m="live" class="live">LIVE 🔒</button>
     </div>
   </div>
@@ -321,11 +366,25 @@ footer{font:11px var(--mono);color:var(--dim);text-align:center;padding:24px}
       <button class="btn" disabled>ARM LIVE TRADING</button>
     </div>
   </div>
+  <div id="demobar">
+    <div class="lrow">
+      <b class="pos">BYBIT DEMO EXECUTION</b>
+      <span class="armed off" id="dbArmed">● DISARMED</span>
+      <span class="chip"><span class="k">API</span><span id="dbApi">—</span></span>
+      <span class="chip"><span class="k">DEMO USDT</span><b id="dbBal">—</b></span>
+      <span class="chip"><span class="k">uPnL</span><span id="dbUpnl">—</span></span>
+      <span class="chip"><span class="k">POSITIONS</span><span id="dbPos">—</span></span>
+      <span class="chip"><span class="k">LAST</span><span id="dbLast">—</span></span>
+      <button class="btn" id="dbArm">ARM</button>
+      <button class="btn" id="dbFlat">FLATTEN</button>
+      <a class="btn sm" href="#demo" style="text-decoration:none">DETAILS</a>
+    </div>
+  </div>
   <div class="tape"><div class="tape-in" id="tape"><span>💜 FEBRUARY initialising…</span></div></div>
   <nav class="sec" id="nav">
     <a href="#overview">01 OVERVIEW</a><a href="#chart">02 CHART</a><a href="#status">03 STATUS</a>
     <a href="#positions">04 POSITIONS</a><a href="#trades">05 TRADES</a><a href="#journal">06 JOURNAL</a>
-    <a href="#backtest">07 BACKTEST</a><a href="#lab">08 LAB</a><a href="#optimizer">09 OPTIMIZER</a><a href="#log">10 LOG</a>
+    <a href="#backtest">07 BACKTEST</a><a href="#lab">08 LAB</a><a href="#optimizer">09 OPTIMIZER</a><a href="#demo">10 BYBIT DEMO</a><a href="#log">11 LOG</a>
   </nav>
 </header>
 
@@ -470,13 +529,29 @@ footer{font:11px var(--mono);color:var(--dim);text-align:center;padding:24px}
   </div>
 </section>
 
+<section id="demo" class="reveal">
+  <h2>Bybit demo account · February executing with paper money<span class="r mut" id="dmSub"></span></h2>
+  <div class="card frost">
+    <div id="dmSetup" class="hint hide"></div>
+    <div class="dgrid" id="dmKpis"></div>
+    <div class="twocol">
+      <div><div class="sub">positions on bybit demo</div><div class="tw" style="max-height:260px"><table id="dmPos"></table></div>
+           <div class="sub">open orders (stops live on the position)</div><div class="tw" style="max-height:220px"><table id="dmOrd"></table></div></div>
+      <div><div class="sub">executor log</div><div class="tw" style="max-height:520px;padding:4px 8px" id="dmAct"></div></div>
+    </div>
+    <div class="sub">closed pnl reported by bybit</div><div class="tw" style="max-height:340px"><table id="dmClosed"></table></div>
+    <div class="small" style="margin-top:10px;line-height:1.7">Orders go only to <b>api-demo.bybit.com</b> (demo funds). Real-money trading is not implemented. ARM / DISARM / FLATTEN need the PIN from config.json.
+      Sizing: risk % from the header × demo USDT balance (or <code>capital_usd</code>). While armed, positions on BTCUSDT / SOLUSDT that the engine does not hold are closed.</div>
+  </div>
+</section>
+
 <section id="log" class="reveal">
   <h2>Log<span class="r"><span class="tg on" id="logFollow">follow</span><span class="tg" id="logErr">errors only</span></span></h2>
   <div class="log" id="logBox"></div>
 </section>
 <footer>💜 FEBRUARY · paper trading only · data: Bybit public API · <span id="ver"></span></footer>
 </main>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast"></div><div class="sweep" id="sweep"></div>
 
 <script>
 "use strict";
@@ -510,6 +585,19 @@ function countTo(el,val,render){if(!el)return;const from=CU.get(el);CU.set(el,va
     x.beginPath();x.arc(f.x*W,f.y*H,f.r*devicePixelRatio,0,7);x.fillStyle='rgba(225,205,255,'+(.25+f.r/4)+')';x.fill()}}requestAnimationFrame(loop)}
   loop();const b=$('#snowBtn');b.classList.toggle('on',on);b.onclick=()=>{on=!on;localStorage.setItem('fsnow',on?'1':'0');b.classList.toggle('on',on)}})();
 
+/* ---------------- spotlight + sweep */
+$$('.card').forEach(c=>{const sp=document.createElement('div');sp.className='spot';c.prepend(sp)});
+let spotCard=null;
+document.addEventListener('pointermove',e=>{if(e.pointerType==='touch')return;const c=e.target.closest&&e.target.closest('.card');
+  if(spotCard&&spotCard!==c)spotCard.style.setProperty('--mx','-500px');spotCard=c;if(!c)return;
+  const r=c.getBoundingClientRect();c.style.setProperty('--mx',(e.clientX-r.left)+'px');c.style.setProperty('--my',(e.clientY-r.top)+'px')},{passive:true});
+function sweep(){const s=$('#sweep');s.classList.remove('go');void s.offsetWidth;s.classList.add('go')}
+let lastEv=null;
+async function watchEvents(){try{const ev=await api('api/events');const top=ev[0];if(!top)return;const k=top.ts+top.type+top.sym;
+  if(lastEv&&k!==lastEv&&['open','close','trail','partial','breakout','signal'].includes(top.type)){sweep();
+    const lab={open:'POSITION OPENED',close:'POSITION CLOSED',trail:'STOP TRAILED',partial:'PARTIAL TAKE-PROFIT',breakout:'BREAKOUT',signal:'ENGULFING SIGNAL'}[top.type];toast(`${top.sym} · ${lab}${top.r!=null?' · '+sgn(top.r)+'R':''}`)}
+  lastEv=k}catch(e){}}
+
 /* ---------------- reveal + nav highlight */
 const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');const id=e.target.id;$$('#nav a').forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+id))}}),{threshold:.08});
 $$('section').forEach(s=>io.observe(s));
@@ -517,12 +605,13 @@ $$('section').forEach(s=>io.observe(s));
 /* ---------------- clock */
 function clock(){const d=new Date();$('#hTime').textContent=d.toLocaleTimeString('en-GB');
   $('#hDate').textContent=d.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}).toUpperCase()+' · '+Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const ms=900000-(Date.now()%900000);$('#hCd').textContent=String(Math.floor(ms/60000)).padStart(2,'0')+':'+String(Math.floor(ms/1000)%60).padStart(2,'0')}
+  const ms=900000-(Date.now()%900000);$('#cdArc').style.strokeDashoffset=43.98*(1-ms/900000);$('#hCd').textContent=String(Math.floor(ms/60000)).padStart(2,'0')+':'+String(Math.floor(ms/1000)%60).padStart(2,'0')}
 setInterval(clock,1000);clock();
 
 /* ---------------- mode / account / toggles */
-function setMode(m){if(m==='live'){$('#livebar').classList.toggle('show');$$('#modeSw button').forEach(b=>b.classList.toggle('on',b.dataset.m==='live'?$('#livebar').classList.contains('show'):b.dataset.m===S.mode));return}
-  S.mode=m;S.tf=m==='backtest'?'60':'15';$$('#tfSw button').forEach(b=>b.classList.toggle('on',b.dataset.t===S.tf));$$('#modeSw button').forEach(b=>b.classList.toggle('on',b.dataset.m===m||(b.dataset.m==='live'&&$('#livebar').classList.contains('show'))));
+function setMode(m){if(m==='demo'){$('#demobar').classList.toggle('show');$$('#modeSw button[data-m=demo]').forEach(b=>b.classList.toggle('on',$('#demobar').classList.contains('show')));loadDemo();return}
+  if(m==='live'){$('#livebar').classList.toggle('show');$$('#modeSw button').forEach(b=>b.classList.toggle('on',b.dataset.m==='live'?$('#livebar').classList.contains('show'):b.dataset.m===S.mode));return}
+  S.mode=m;S.tf=m==='backtest'?'60':'15';$$('#tfSw button').forEach(b=>b.classList.toggle('on',b.dataset.t===S.tf));$$('#modeSw button').forEach(b=>b.classList.toggle('on',b.dataset.m===m||(b.dataset.m==='live'&&$('#livebar').classList.contains('show'))||(b.dataset.m==='demo'&&$('#demobar').classList.contains('show'))));
   $('#btBanner').classList.toggle('show',m==='backtest');S.chartFit=true;S.tradeIds=new Set();S.firstLoad=true;S.jweekEnd=null;S.jsel=null;
   $('#ovTitle').textContent=m==='backtest'?'Backtest account':'Live paper account';refreshAll()}
 $$('#modeSw button').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
@@ -728,8 +817,27 @@ function renderStatus(j){const g=$('#stGrid');const syms=j.symbols||[];
       kv+=`<div>expires in</div><div>${su.bars_left} bars (${dur(su.bars_left/4)})</div>`}
     if(ps)kv+=`<div>position</div><div><span class="tag ${ps.dir===1?'L':'S'}">${ps.dir===1?'LONG':'SHORT'}</span> @ ${pxd(ps.entry)}</div><div>stop</div><div class="ice">${pxd(ps.sl)} <span class="mut">(init ${pxd(ps.sl0)})</span></div><div>structure ${ps.dir===1?'high':'low'}</div><div>${ps.struct?pxd(ps.struct):'forming…'}</div><div>trail / BE steps</div><div>${(ps.trail||[]).length}</div>${ps.tp?`<div>take profit (zone C)</div><div class="pos">${pxd(ps.tp)}</div>`:''}${(ps.partials||[]).length?`<div>partial taken</div><div class="pos">${pxd(ps.partials[0][1])}</div>`:''}`;
     const zs=(s.zones||[]).map(z=>`<span class="${su&&Math.abs(su.zone.bot-z.bot)<1e-9?'hot':''}" title="${z.pivots} pivots · ${z.touches} touches · ${z.kind}">${pxd(z.bot)}–${pxd(z.top)} <span class="mut">×${z.pivots}</span></span>`).join('');
-    return `<div class="card frost"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font:700 15px var(--mono);letter-spacing:.08em">${sym}</b><span class="small">${s.pending?'<span class="am">ENTRY PENDING</span>':''} 4h zones @ ${tfmt(s.zones_ts)}</span></div>
-      ${pipe}<div class="stline">${esc(s.text)}<span class="cur"></span></div><div class="kv">${kv}</div><div class="zl">${zs||'<span>no valid zones</span>'}</div></div>`}).join('')}
+    return `<div class="card frost"><div class="spot"></div><div style="display:flex;justify-content:space-between;align-items:center"><b style="font:700 15px var(--mono);letter-spacing:.08em">${sym}</b><span class="small">${s.pending?'<span class="am">ENTRY PENDING</span>':''} 4h zones @ ${tfmt(s.zones_ts)}</span></div>
+      ${pipe}<div class="stline">${esc(s.text)}<span class="cur"></span></div>
+      <div class="stwrap" style="margin-top:4px"><div><div class="kv">${kv}</div><div class="zl">${zs||'<span>no valid zones</span>'}</div></div>
+      <div>${ladder(s)}${gauge(s.regime)}</div></div></div>`}).join('')}
+function ladder(s){const zs=s.zones||[];if(!zs.length||s.price==null)return '<div class="ladder"></div>';
+  const su=s.setup,ps=s.position,lv=[];if(su){if(su.fib)lv.push([su.fib,'#c79bff','61.8']);if(su.deep)lv.push([su.deep,'rgba(199,155,255,.6)','72.2'])}
+  if(ps){lv.push([ps.sl,'#ff5c7a','SL']);lv.push([ps.entry,'#8fb4ff','IN']);if(ps.tp)lv.push([ps.tp,'#3dffa8','TP'])}
+  // window: nearest 2 zones above/below price
+  const below=zs.filter(z=>z.top<s.price).slice(-2),above=zs.filter(z=>z.bot>s.price).slice(0,2),inside=zs.filter(z=>z.bot<=s.price&&z.top>=s.price);
+  const show=[...below,...inside,...above];const prices=[s.price,...show.flatMap(z=>[z.bot,z.top]),...lv.map(x=>x[0])];
+  let lo=Math.min(...prices),hi=Math.max(...prices);const pad=(hi-lo)*.08||s.price*.01;lo-=pad;hi+=pad;const y=p=>(1-(p-lo)/(hi-lo))*100;
+  return `<div class="ladder">${show.map(z=>`<div class="z ${su&&Math.abs(su.zone.bot-z.bot)<1e-9?'hot':''}" style="top:${y(z.top)}%;height:${Math.max(.8,y(z.bot)-y(z.top))}%"><span>${pxd(z.bot)}</span></div>`).join('')}
+    ${lv.map(([p,c,t])=>`<div class="lv" style="top:${y(p)}%;border-color:${c}"><b style="color:${c}">${t}</b></div>`).join('')}
+    <div class="px" style="top:${y(s.price)}%"><i>${pxd(s.price)}</i></div></div>`}
+function gauge(r){if(!r)return'';const v=Math.max(0,Math.min(1,r.vol_pct)),mx=r.vol_max||1,L=125.66;const ang=a=>{const t=Math.PI*(1-a);return [60+50*Math.cos(t),58-50*Math.sin(t)]};const [tx,ty]=ang(mx),[ix,iy]=ang(Math.min(1,mx+.0001));
+  const col=v>mx?'#ff5c7a':'#c79bff';
+  return `<div class="gauge"><svg width="124" height="70" viewBox="0 0 120 66"><path d="M10 58 A50 50 0 0 1 110 58" stroke="#221a33" stroke-width="9" fill="none" stroke-linecap="round"/>
+   <path class="f" d="M10 58 A50 50 0 0 1 110 58" stroke="${col}" stroke-width="9" fill="none" stroke-linecap="round" stroke-dasharray="${L}" stroke-dashoffset="${L*(1-v)}"/>
+   <line x1="${tx}" y1="${ty}" x2="${60+(tx-60)*1.22}" y2="${58+(ty-58)*1.22}" stroke="#ffc062" stroke-width="2"/>
+   <text x="60" y="52" text-anchor="middle" font-family="JetBrains Mono" font-size="15" font-weight="700" fill="${col}">${Math.round(v*100)}</text></svg>
+   <div class="l">4H VOL PCTL · MAX ${Math.round(mx*100)}</div></div>`}
 
 /* ---------------- tape */
 function renderTape(){const b=S.bundle,j=S.status;if(!b||!j)return;const s=b.stats;const parts=[];
@@ -741,7 +849,7 @@ function renderTape(){const b=S.bundle,j=S.status;if(!b||!j)return;const s=b.sta
 
 /* ---------------- loaders */
 async function loadStatus(){try{const j=await api('api/status');S.status=j;$('#ver').textContent='v'+j.version;
-  const dot=$('#hDot'),eng=$('#hEng');if(j.trader_alive){dot.className='dot ok';eng.textContent='ENGINE LIVE'}else if(j.heartbeat){dot.className='dot bad';eng.textContent='TRADER OFFLINE'}else{dot.className='dot warn';eng.textContent='NO TRADER YET'}
+  const dot=$('#hDot'),eng=$('#hEng');$('#ecg').classList.toggle('dead',!j.trader_alive);if(j.trader_alive){dot.className='dot ok';eng.textContent='ENGINE LIVE'}else if(j.heartbeat){dot.className='dot bad';eng.textContent='TRADER OFFLINE'}else{dot.className='dot warn';eng.textContent='NO TRADER YET'}
   for(const sym of j.symbols){const t=(j.ticks||{})[sym];if(!t||t.last==null)continue;const el=$('#px'+sym);if(!el)continue;const prev=S.lastPx[sym];el.textContent=pxd(t.last);
     if(prev!=null&&t.last!==prev){el.classList.remove('flash-up','flash-dn');void el.offsetWidth;el.classList.add(t.last>prev?'flash-up':'flash-dn');setTimeout(()=>el.classList.remove('flash-up','flash-dn'),900)}S.lastPx[sym]=t.last;
     const c=$('#ch'+sym);c.textContent=sgn(t.chg24,2,'%');c.className='c '+cls(t.chg24)}
@@ -825,9 +933,37 @@ window.labApply=async id=>{const r=LAB.runs.find(x=>x.id===id);if(!confirm('Appl
   try{await jpost('api/lab/apply',{id});toast('applied - paper trader rebuilds itself');LAB.cur={};loadLab();loadStatus()}catch(e){toast(e.message,'var(--rd)')}};
 window.labDel=async id=>{await jpost('api/lab/delete',{id});loadLab()};
 
+/* ---------------- bybit demo */
+const DM={};
+async function loadDemo(){try{const d=await api('api/demo');Object.assign(DM,d);renderDemo(d)}catch(e){}}
+function renderDemo(d){const a=$('#dbArmed');a.className='armed '+(d.armed?'on':'off');a.textContent=d.armed?'● ARMED':'● DISARMED';
+  $('#dbArm').textContent=d.armed?'DISARM':'ARM';$('#dbArm').className='btn'+(d.armed?'':' pri');
+  $('#dbApi').innerHTML=!d.configured?'<span class="am">no keys</span>':d.api_ok?'<span class="pos">connected</span>':`<span class="neg" title="${esc(d.error)}">error</span>`;
+  const w=d.wallet||{};$('#dbBal').textContent=w.usdt_wallet!=null?usd(w.usdt_wallet):'—';$('#dbUpnl').innerHTML=w.upnl!=null?`<span class="${cls(w.upnl)}">${susd(w.upnl)}</span>`:'—';
+  $('#dbPos').textContent=(d.positions||[]).length;const la=(d.actions||[])[0];$('#dbLast').textContent=la?`${la.sym} ${la.what} · ${tfmt(la.ts)}`:'—';
+  $('#dmSub').textContent=d.configured?(d.armed?'armed - mirroring every February trade':'disarmed - nothing is sent'):'not configured';
+  const su=$('#dmSetup');su.classList.toggle('hide',d.configured&&d.pin_set);
+  su.innerHTML=`<b class="ice">Setup</b><br>1. bybit.com → switch to <b>Demo Trading</b> → avatar → <b>API</b> → create a key (system-generated, permissions: Contract → Orders + Positions).<br>
+   2. On the Pi: <code>nano ~/january/february/config.json</code> → <code>"demo": {"api_key": "...", "api_secret": "...", "arm_pin": "a PIN you choose"}</code><br>3. <code>./stop.sh && ./start.sh</code>, then press ARM here.`
+   +(d.configured&&!d.pin_set?'<br><span class="am">Keys found - set an arm_pin to enable ARM.</span>':'');
+  const closed=d.closed||[];const sumC=closed.reduce((a,b)=>a+b.pnl,0);const wins=closed.filter(c=>c.pnl>0).length;
+  $('#dmKpis').innerHTML=[['Status',d.armed?'<span class="pos">ARMED</span>':'<span class="mut">DISARMED</span>'],['USDT balance',w.usdt_wallet!=null?usd(w.usdt_wallet):'—'],['Total equity',w.equity!=null?usd(w.equity):'—'],
+    ['Unrealized',w.upnl!=null?`<span class="${cls(w.upnl)}">${susd(w.upnl)}</span>`:'—'],['Closed PnL (last 50)',`<span class="${cls(sumC)}">${susd(sumC)}</span>`],['Closed fills · wins',`${closed.length} · ${wins}`],
+    ['Leverage cap',fmt(d.leverage,0)+'×'],['Sizing base',d.capital_usd?('cap '+usd(d.capital_usd)):'USDT balance']].map(([k,v])=>`<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+  const P=d.positions||[];$('#dmPos').innerHTML=P.length?'<tr><th>Symbol</th><th>Side</th><th>Size</th><th>Entry</th><th>Mark</th><th>Stop</th><th>uPnL</th><th>Engine</th></tr>'+P.map(p=>{const m=(d.mirror||{})[p.sym];return `<tr><td>${p.sym}</td><td><span class="tag ${p.dir===1?'L':'S'}">${p.side==='Buy'?'LONG':'SHORT'}</span></td><td>${p.size}</td><td>${pxd(p.entry)}</td><td>${pxd(p.mark)}</td><td class="ice">${p.sl?pxd(p.sl):'<span class="neg">none!</span>'}</td><td class="${cls(p.upnl)}">${susd(p.upnl)}</td><td>${m?'<span class="pos">mirrored</span>':'<span class="am">not from engine</span>'}</td></tr>`}).join(''):'<tr><td class="empty">flat on the demo account</td></tr>';
+  const O=d.orders||[];$('#dmOrd').innerHTML=O.length?'<tr><th>Symbol</th><th>Side</th><th>Type</th><th>Price</th><th>Qty</th><th>Tag</th></tr>'+O.map(o=>`<tr><td>${o.sym}</td><td>${o.side}</td><td>${o.type}${o.reduce?' · RO':''}</td><td>${pxd(o.price)}</td><td>${o.qty}</td><td class="mut">${esc((o.link||'').split('-').pop())}</td></tr>`).join(''):'<tr><td class="empty">no open orders</td></tr>';
+  $('#dmAct').innerHTML=(d.actions||[]).length?(d.actions||[]).map(a=>`<div class="dact ${a.ok?'':'bad'}"><span class="mut">${tfmt(a.ts)}</span><span>${a.sym}</span><span><span class="w">${esc(a.what)}</span> <span class="mut">${esc(a.detail)}</span></span></div>`).join(''):'<div class="empty">no executor actions yet</div>';
+  $('#dmClosed').innerHTML=closed.length?'<tr><th>Closed</th><th>Symbol</th><th>Side</th><th>Qty</th><th>Entry</th><th>Exit</th><th>PnL</th></tr>'+closed.map(c=>`<tr><td>${tfmt(c.ts)}</td><td>${c.sym}</td><td>${c.side==='Sell'?'close long':'close short'}</td><td>${c.qty}</td><td>${pxd(c.entry)}</td><td>${pxd(c.exit)}</td><td class="${cls(c.pnl)}">${susd(c.pnl)}</td></tr>`).join(''):'<tr><td class="empty">no closed demo trades yet</td></tr>'}
+async function demoPost(url,body,msg){const pin=prompt('PIN (demo.arm_pin from config.json)');if(pin==null)return;
+  try{await api(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({pin},body))});toast(msg,'var(--gr)');sweep();setTimeout(loadDemo,800)}catch(e){toast(e.message,'var(--rd)')}}
+$('#dbArm').onclick=()=>{const arm=!DM.armed;if(arm&&!confirm('ARM Bybit DEMO execution?\n\nFrom the next February entry on, orders are sent to your Bybit DEMO account (paper money). Real money is never touched.'))return;demoPost('api/demo/arm',{armed:arm},arm?'demo execution ARMED':'demo execution disarmed')};
+$('#dbFlat').onclick=()=>{if(!confirm('Close all February positions on the Bybit DEMO account and disarm?'))return;demoPost('api/demo/flatten',{},'flatten requested - closing within seconds')};
+
 /* ---------------- boot */
 function refreshAll(){loadStatus();loadBundle();loadChart();loadLog()}
-initEq();initChart();sizeOvl();refreshAll();loadOpt();loadLab();
+initEq();initChart();sizeOvl();refreshAll();loadOpt();loadLab();loadDemo();watchEvents();
+setInterval(()=>{if(!document.hidden)loadDemo()},15000);
+setInterval(()=>{if(!document.hidden&&S.mode==='paper')watchEvents()},10000);
 setInterval(loadStatus,5000);
 setInterval(()=>{if(S.mode==='paper')loadBundle()},10000);
 setInterval(()=>{if(S.mode==='paper'&&!document.hidden)loadChart()},15000);

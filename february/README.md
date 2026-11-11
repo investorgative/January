@@ -65,8 +65,36 @@ tmux attach -t FebruaryWeb    # web server
 python3 debug_bundle.py --serve --notes "..."                              # data export for Claude
 ```
 
+## Bybit Demo Trading (paper money on your Bybit demo account)
+February can mirror every trade on your **Bybit demo account**. The executor is hard-locked to
+`https://api-demo.bybit.com`, and real-money trading is not implemented anywhere (the LIVE button stays locked).
+
+1. bybit.com → switch to **Demo Trading** → avatar → **API** → create a system-generated key
+   (permissions: Contract → Orders + Positions). Keys must be created *inside* Demo Trading.
+2. `nano ~/january/february/config.json`, add:
+   ```json
+   "demo": {"api_key": "YOUR_DEMO_KEY", "api_secret": "YOUR_DEMO_SECRET", "arm_pin": "a PIN you choose",
+            "leverage": 10, "capital_usd": 0}
+   ```
+   `capital_usd: 0` sizes from the demo USDT balance (Bybit gives 50,000 USDT by default). Set e.g. `100` to size
+   as if the account had $100, so it mirrors your $100 paper accounts.
+3. `./stop.sh && ./start.sh`, open the dashboard → **DEMO** in the header → **ARM** (asks for the PIN).
+
+What happens while armed:
+* **Entry:** market order, then a stop-loss on the position, plus a reduce-only limit take-profit at zone C (and a partial limit if `partial_r` is on).
+* **Trailing:** every trail moves the stop on Bybit.
+* **Engine close:** the rest of the position is closed and open orders are cancelled.
+* **Every 60 s, the bot reconciles with Bybit:** it re-sets a stop that differs, and closes BTC/SOL positions the engine does not hold.
+  (Don't trade BTCUSDT/SOLUSDT by hand on the demo account while armed.)
+* **Sizing:** risk % from the header × base balance, where a stop-out (fees included) is 1 R. The edge monitor applies too.
+* **Arming mid-trade:** the bot starts mirroring with the next entry.
+* **FLATTEN:** closes everything on the demo account and disarms (PIN required).
+* **Logging:** every action is logged in the dashboard and `data/demo_state.json`. Errors go to the Discord error webhook.
+
 ## Verified
 * No look-ahead: truncated-data replays give identical trades. All regime numbers come from closed 4h candles only.
+* Demo executor: tested end-to-end against a signature-checking mock of the Bybit v5 API (60 simulated days, armed):
+  every request correctly signed, 5 % risk sizing, stops/trails/take-profits/partials/closes mirrored.
 * Paper trader == backtester: a 60-day accelerated live simulation on real candles (with breakeven and partials
   switched on) produced exactly the same 9 trades, exits and partial fills as the backtester.
 * Two fixes compared to January: the warm-up keeps a breakout setup that is in progress at startup (January drops it,

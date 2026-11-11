@@ -17,8 +17,11 @@ import time
 from flask import Flask, Response, request, send_from_directory
 from werkzeug.exceptions import HTTPException
 
+import hmac as _hmac
+
 import february_core as core
 import february_backtest as bt
+import february_demo as demo
 
 cfg = core.load_config()
 log = core.setup_logging("web", cfg)
@@ -523,6 +526,65 @@ def api_optimize_apply():
     cfg_now()
     log.info(f"optimizer rank #{i + 1} applied to config.json (paper trader reloads automatically)")
     return jresp({"ok": True, "strategy": cfg["strategy"]})
+
+
+# ------------------------------------------------------------------ bybit demo trading
+PIN_FAILS = []
+
+
+def _pin_ok(pin):
+    want = str(cfg.get("demo", {}).get("arm_pin") or "")
+    now = time.time()
+    PIN_FAILS[:] = [t for t in PIN_FAILS if now - t < 600]
+    if len(PIN_FAILS) >= 5:
+        return False, "too many wrong PINs - wait 10 minutes"
+    if not want:
+        return False, "set demo.arm_pin in config.json first"
+    if not _hmac.compare_digest(str(pin or ""), want):
+        PIN_FAILS.append(now)
+        time.sleep(1)
+        return False, "wrong PIN"
+    return True, ""
+
+
+@app.route("/api/demo")
+def api_demo():
+    c = cfg_now()
+    return jresp(cached("demo", 8, lambda: demo.snapshot(c)))
+
+
+@app.route("/api/demo/arm", methods=["POST"])
+def api_demo_arm():
+    j = request.get_json(force=True, silent=True) or {}
+    ok, why = _pin_ok(j.get("pin"))
+    if not ok:
+        return jresp({"error": why}, 403)
+    if not cfg.get("demo", {}).get("api_key"):
+        return jresp({"error": "add your Bybit DEMO api_key / api_secret to config.json first"}, 400)
+    ctl = core.read_json(demo.CONTROL_PATH, {}) or {}
+    ctl["armed"] = bool(j.get("armed"))
+    ctl["changed"] = core.now_ms()
+    core.save_json(demo.CONTROL_PATH, ctl)
+    with CACHE_LOCK:
+        CACHE.pop("demo", None)
+    log.info(f"Bybit DEMO execution {'ARMED' if ctl['armed'] else 'disarmed'} from the website")
+    return jresp({"ok": True, "armed": ctl["armed"]})
+
+
+@app.route("/api/demo/flatten", methods=["POST"])
+def api_demo_flatten():
+    j = request.get_json(force=True, silent=True) or {}
+    ok, why = _pin_ok(j.get("pin"))
+    if not ok:
+        return jresp({"error": why}, 403)
+    ctl = core.read_json(demo.CONTROL_PATH, {}) or {}
+    ctl["armed"] = False
+    ctl["flatten_req"] = core.now_ms()
+    core.save_json(demo.CONTROL_PATH, ctl)
+    with CACHE_LOCK:
+        CACHE.pop("demo", None)
+    log.info("Bybit DEMO: flatten requested from the website (and disarmed)")
+    return jresp({"ok": True})
 
 
 # ------------------------------------------------------------------ strategy lab

@@ -42,5 +42,20 @@ chmod +x start.sh stop.sh
 echo
 echo "Setup complete."
 [ -f config.json ] || ./venv/bin/python -c "import february_core; february_core.load_config()"
+CUR=$(./venv/bin/python -c "import json;print(json.load(open('config.json')).get('web',{}).get('passcode',''))")
+if [ -z "$CUR" ]; then
+  while true; do
+    read -r -s -p "Choose the website passcode (4-8 digits, input hidden): " PC; echo
+    if [[ "$PC" =~ ^[0-9]{4,8}$ ]]; then break; fi
+    echo "digits only, 4 to 8 of them"
+  done
+  PC="$PC" ./venv/bin/python - <<'PY'
+import json, os
+c = json.load(open("config.json")); c.setdefault("web", {})["passcode"] = os.environ["PC"]
+json.dump(c, open("config.json", "w"), indent=2)
+PY
+  chmod 600 config.json
+  echo "== passcode saved in config.json (this file is not in git)"
+fi
 echo "1) nano config.json   -> put your Discord webhooks into \"discord\" (BTCUSDT, SOLUSDT, errors)"
 echo "2) ./start.sh         -> starts tmux sessions February, FebruaryWeb, FebruaryCloud"

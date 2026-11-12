@@ -67,6 +67,17 @@ tmux attach -t FebruaryWeb    # web server
 python3 debug_bundle.py --serve --notes "..."                              # data export for Claude
 ```
 
+## The vault (lock screen)
+Every visit and every reload starts at the lock screen: a rotating 3D amethyst with a hexagon keypad.
+* The passcode (4–8 digits) is checked **on the Pi**. The page itself contains no data; every API call needs a token that
+  only a correct code hands out. Tokens live in memory, so restarting the web server locks everyone out.
+* Wrong codes are throttled per device, also behind Cloudflare. From the 6th wrong code the wait escalates:
+  1 min, 5 min, 15 min, then 60 min.
+* Auto-lock after 10 minutes without activity (`web.autolock_minutes`), and a lock button in the header.
+* Set or change the passcode: `nano config.json` → `"web": {"passcode": "123456", ...}` → `./stop.sh && ./start.sh`.
+  If none is set, one is generated and printed once in `tmux attach -t FebruaryWeb`.
+* The demo / live ARM PINs are separate from this passcode, so real-money actions need both.
+
 ## Bybit execution: DEMO and LIVE
 February's engine stays the master. Two independent executors can mirror its trades on Bybit:
 

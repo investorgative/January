@@ -144,7 +144,9 @@ DEFAULT_CONFIG = {
         },
         "include_lab_space": False,
     },
-    "web": {"port": 8753, "host": "0.0.0.0", "password": ""},
+    "web": {"port": 8753, "host": "0.0.0.0", "password": "",
+            "passcode": "",           # lock-screen passcode, 4-8 digits (generated + printed on first start if empty)
+            "autolock_minutes": 10},  # the website locks itself after this much inactivity
     "demo": {                     # Bybit DEMO trading (paper money on your Bybit demo account) - never real money
         "enabled": False,         # armed at start (the website ARM switch overrides this)
         "api_key": "",            # key created INSIDE Bybit Demo Trading (avatar -> API)

@@ -18,6 +18,7 @@ from flask import Flask, Response, request, send_from_directory
 from werkzeug.exceptions import HTTPException
 
 import hmac as _hmac
+import secrets
 
 import february_core as core
 import february_backtest as bt
@@ -25,6 +26,28 @@ import february_exec as ex
 
 cfg = core.load_config()
 log = core.setup_logging("web", cfg)
+
+
+def _init_passcode():
+    """passcode for the lock screen: config.json web.passcode (or env FEBRUARY_PASSCODE), 4-8 digits.
+    If missing, a random one is generated, saved to config.json and printed ONCE to the console (tmux)."""
+    pc = str(os.environ.get("FEBRUARY_PASSCODE") or cfg["web"].get("passcode") or "")
+    if pc.isdigit() and 4 <= len(pc) <= 8:
+        return pc
+    pc = "".join(secrets.choice("0123456789") for _ in range(4))
+    try:
+        raw = core.read_json(core.CONFIG_PATH, {}) or {}
+        raw.setdefault("web", {})["passcode"] = pc
+        core.save_json(core.CONFIG_PATH, raw)
+        os.chmod(core.CONFIG_PATH, 0o600)
+    except Exception:
+        pass
+    print(f"\n*** No valid web passcode in config.json - generated one: {pc}  (change: web.passcode) ***\n", flush=True)
+    return pc
+
+
+PASSCODE = _init_passcode()
+AUTOLOCK_MIN = float(cfg["web"].get("autolock_minutes", 10))
 app = Flask(__name__, static_folder=None)
 STATIC = os.path.join(core.BASE_DIR, "static")
 EVENTS_PATH = os.path.join(core.DATA_DIR, "events.json")
@@ -84,14 +107,99 @@ def cached(key, ttl, fn):
     return val
 
 
+# ------------------------------------------------------------------ passcode lock (server side)
+# The page itself contains no data. Every /api/ call needs a token that only /api/unlock hands out.
+# Tokens live in memory (a restart locks everyone), wrong codes are throttled per IP like an iPad.
+AUTH_LOCK = threading.Lock()
+TOKENS = {}
+FAILS = {}
+TOKEN_TTL = 12 * 3600
+LOCKOUT = {6: 60, 7: 300, 8: 900}
+PUBLIC_API = {"/api/auth/status", "/api/unlock"}
+
+
+def client_ip():
+    peer = request.remote_addr or ""
+    if peer in ("127.0.0.1", "::1"):  # behind the Cloudflare tunnel
+        return request.headers.get("CF-Connecting-IP") or peer
+    return peer
+
+
+def lockout_for(n):
+    return 0 if n < 6 else LOCKOUT.get(n, 3600)
+
+
+def token_ok(tok):
+    if not tok:
+        return False
+    with AUTH_LOCK:
+        exp = TOKENS.get(tok)
+        if not exp or exp < time.time():
+            TOKENS.pop(tok, None)
+            return False
+        return True
+
+
 @app.before_request
 def _auth():
-    pw = cfg["web"].get("password")
-    if not pw or request.path == "/healthz":
+    if request.path == "/healthz":
         return None
-    a = request.authorization
-    if not a or a.password != pw:
-        return Response("Authentication required", 401, {"WWW-Authenticate": 'Basic realm="FEBRUARY"'})
+    pw = cfg["web"].get("password")
+    if pw:
+        a = request.authorization
+        if not a or a.password != pw:
+            return Response("Authentication required", 401, {"WWW-Authenticate": 'Basic realm="FEBRUARY"'})
+    if request.path.startswith("/api/") and request.path not in PUBLIC_API:
+        if not token_ok(request.headers.get("X-February-Token", "")):
+            return jresp({"error": "locked"}, 401)
+    return None
+
+
+@app.after_request
+def _headers(r):
+    r.headers["X-Frame-Options"] = "DENY"
+    r.headers["X-Content-Type-Options"] = "nosniff"
+    r.headers["Referrer-Policy"] = "no-referrer"
+    return r
+
+
+@app.route("/api/auth/status")
+def api_auth_status():
+    with AUTH_LOCK:
+        f = FAILS.get(client_ip(), {"n": 0, "until": 0})
+    return jresp({"attempts": f["n"], "wait": max(0, int(f["until"] - time.time())), "digits": len(PASSCODE),
+                  "autolock_min": AUTOLOCK_MIN, "version": core.VERSION})
+
+
+@app.route("/api/unlock", methods=["POST"])
+def api_unlock():
+    code = str((request.get_json(force=True, silent=True) or {}).get("code", ""))
+    ip = client_ip()
+    with AUTH_LOCK:
+        f = FAILS.setdefault(ip, {"n": 0, "until": 0})
+        now = time.time()
+        if f["until"] > now:
+            return jresp({"error": "locked", "wait": int(f["until"] - now), "attempts": f["n"]}, 429)
+        if _hmac.compare_digest(code.encode(), PASSCODE.encode()):
+            FAILS.pop(ip, None)
+            for t in [t for t, e in TOKENS.items() if e < now]:
+                TOKENS.pop(t, None)
+            tok = secrets.token_urlsafe(32)
+            TOKENS[tok] = now + TOKEN_TTL
+            return jresp({"token": tok, "autolock_min": AUTOLOCK_MIN})
+        f["n"] += 1
+        f["until"] = now + lockout_for(f["n"])
+        n, wait = f["n"], lockout_for(f["n"])
+    if n >= 6:
+        log.warning(f"web: {n} wrong passcodes from {ip} - locked for {wait}s")
+    return jresp({"error": "wrong", "wait": wait, "attempts": n}, 403)
+
+
+@app.route("/api/lock", methods=["POST"])
+def api_lock():
+    with AUTH_LOCK:
+        TOKENS.pop(request.headers.get("X-February-Token", ""), None)
+    return jresp({"ok": True})
 
 
 @app.errorhandler(Exception)

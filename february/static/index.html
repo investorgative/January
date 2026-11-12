@@ -299,6 +299,55 @@ tr.new td{animation:rowin 1.6s ease}
 .sweep{position:fixed;left:0;right:0;top:0;height:2px;z-index:95;pointer-events:none;opacity:0;background:linear-gradient(90deg,transparent,var(--ice),var(--au),transparent)}
 .sweep.go{animation:sw 1.6s ease}
 @keyframes sw{0%{opacity:1;transform:translateX(-100%)}100%{opacity:0;transform:translateX(100%)}}
+/* ===================== AMETHYST VAULT (lock screen) ===================== */
+body.is-locked{overflow:hidden}
+body.is-locked #app{visibility:hidden}
+#app{position:relative}
+.lock{position:fixed;inset:0;z-index:300;display:none;flex-direction:column;align-items:center;justify-content:flex-start;
+  padding:max(18px,env(safe-area-inset-top)) 18px max(18px,env(safe-area-inset-bottom));color:#efe6ff;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+body.is-locked .lock,body.unlocking .lock{display:flex}
+.lk-bg{position:absolute;inset:0;z-index:-2;background:
+  radial-gradient(60% 45% at 50% 30%,rgba(157,107,255,.28),transparent 70%),
+  radial-gradient(40% 35% at 15% 85%,rgba(255,122,217,.14),transparent 70%),
+  radial-gradient(45% 40% at 90% 80%,rgba(143,180,255,.12),transparent 70%),
+  linear-gradient(180deg,#0a0614,#05030a 70%);transition:opacity .9s ease}
+.lk-bg::after{content:"";position:absolute;inset:0;background:conic-gradient(from 0deg at 50% 32%,transparent 0 10%,rgba(199,155,255,.05) 12%,transparent 15% 35%,rgba(255,143,199,.04) 37%,transparent 40% 60%,rgba(143,180,255,.05) 62%,transparent 65% 85%,rgba(199,155,255,.05) 87%,transparent 90%);animation:rays 40s linear infinite}
+@keyframes rays{to{transform:rotate(360deg)}}
+#gemfx{position:absolute;inset:0;width:100%;height:100%;z-index:-1}
+.lk-ui{transition:opacity .5s ease,transform .7s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;align-items:center;width:100%}
+body.unlocking .lk-ui{opacity:0;transform:translateY(24px) scale(.98)}
+body.unlocking .lk-bg{opacity:0}
+.lk-top{width:100%;max-width:980px;display:flex;justify-content:space-between;font:600 11px var(--mono);letter-spacing:.24em;color:rgba(230,215,255,.6)}
+.lk-top b{font-weight:800;background:linear-gradient(90deg,#fff,#c79bff 50%,#ff8fc7);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lk-clock{text-align:center;margin-top:3vh}
+.lk-time{font:200 clamp(56px,11vw,104px)/1 var(--sans);letter-spacing:-.02em;background:linear-gradient(180deg,#fff 30%,#cdb6ff);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 40px rgba(199,155,255,.25)}
+.lk-date{font:500 13px var(--mono);letter-spacing:.2em;color:rgba(230,215,255,.7);margin-top:8px;text-transform:uppercase}
+.lk-gemspace{height:clamp(170px,30vh,260px);width:100%}
+.lk-dots{display:flex;gap:16px;height:22px;align-items:center;justify-content:center}
+.lk-dots i{width:13px;height:13px;transform:rotate(45deg);border:1.5px solid rgba(220,200,255,.7);border-radius:2px;transition:all .25s cubic-bezier(.2,.8,.2,1)}
+.lk-dots i.on{background:linear-gradient(135deg,#fff,#c79bff);border-color:#fff;box-shadow:0 0 14px #c79bff,0 0 30px rgba(199,155,255,.6);transform:rotate(45deg) scale(1.15)}
+.lk-dots.bad{animation:shake .55s cubic-bezier(.36,.07,.19,.97)}
+.lk-dots.bad i{border-color:#ff5c7a;background:rgba(255,92,122,.4);box-shadow:0 0 14px #ff5c7a}
+.lk-dots.ok i{background:#fff;box-shadow:0 0 22px #fff,0 0 40px #c79bff}
+@keyframes shake{10%,90%{transform:translateX(-2px)}20%,80%{transform:translateX(5px)}30%,50%,70%{transform:translateX(-10px)}40%,60%{transform:translateX(10px)}}
+.lk-msg{min-height:20px;margin:14px 0 6px;font:500 12px var(--mono);letter-spacing:.06em;color:rgba(230,215,255,.75);text-align:center}
+.lk-msg.err{color:#ff8fa3}
+.lk-pad{display:grid;grid-template-columns:repeat(3,auto);gap:16px 26px;margin-top:6px}
+.lk-key{width:76px;height:76px;position:relative;border:0;background:none;color:#fff;cursor:pointer;font-family:var(--sans);padding:0;-webkit-tap-highlight-color:transparent}
+.lk-key svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.lk-key svg polygon{fill:rgba(199,155,255,.07);stroke:rgba(220,200,255,.35);stroke-width:1.2;transition:all .25s}
+.lk-key:hover svg polygon{fill:rgba(199,155,255,.14);stroke:rgba(235,220,255,.7)}
+.lk-key.hit svg polygon{fill:rgba(240,225,255,.55);stroke:#fff;filter:drop-shadow(0 0 12px #c79bff)}
+.lk-key b{position:relative;display:block;font:300 30px/1 var(--sans);margin-top:-2px}
+.lk-key small{position:relative;display:block;font:600 8.5px var(--mono);letter-spacing:.24em;color:rgba(230,215,255,.55);margin-top:3px;height:10px}
+.lk-key.fn b{font:500 12px var(--mono);letter-spacing:.14em;color:rgba(230,215,255,.8)}
+.lk-key.fn svg polygon{fill:transparent;stroke:transparent}
+.lk-pad.off{opacity:.25;pointer-events:none;filter:grayscale(1)}
+.lk-foot{margin-top:auto;padding-top:16px;font:500 10.5px var(--mono);letter-spacing:.12em;color:rgba(230,215,255,.38);text-align:center}
+.lockbtn{width:34px;height:34px;border-radius:10px;border:1px solid var(--line2);background:rgba(11,17,27,.8);color:var(--ice);cursor:pointer;display:grid;place-items:center}
+.lockbtn:hover{border-color:var(--ice);box-shadow:0 0 14px rgba(199,155,255,.3)}
+.lockbtn svg{width:16px;height:16px}
+@media(max-height:720px){.lk-clock{margin-top:1vh}.lk-gemspace{height:150px}.lk-key{width:64px;height:64px}.lk-pad{gap:10px 22px}.lk-time{font-size:56px}}
 .toast{position:fixed;left:50%;top:22px;transform:translateX(-50%) translateY(-20px);z-index:90;background:rgba(15,23,36,.96);border:1px solid var(--ice);color:var(--txt);padding:10px 16px;border-radius:12px;font:12px var(--mono);opacity:0;transition:all .35s;pointer-events:none;box-shadow:var(--glow)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 footer{font:11px var(--mono);color:var(--dim);text-align:center;padding:24px}
@@ -309,7 +358,20 @@ footer{font:11px var(--mono);color:var(--dim);text-align:center;padding:24px}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}#snow{display:none}}
 </style>
 </head>
-<body>
+<body class="is-locked">
+<section class="lock" id="lock" aria-label="FEBRUARY is locked">
+  <div class="lk-bg"></div><canvas id="gemfx"></canvas>
+  <div class="lk-ui">
+    <div class="lk-top"><span><b>FEBRUARY</b> · VAULT</span><span id="lkState">◆ SEALED</span></div>
+    <div class="lk-clock"><div class="lk-time" id="lkTime">--:--</div><div class="lk-date" id="lkDate">&nbsp;</div></div>
+    <div class="lk-gemspace" id="gemSpace"></div>
+    <div class="lk-dots" id="lkDots"></div>
+    <div class="lk-msg" id="lkMsg">Enter passcode</div>
+    <div class="lk-pad" id="lkPad"></div>
+    <div class="lk-foot">checked on the pi · nothing leaves the vault without the code</div>
+  </div>
+</section>
+<div id="app">
 <canvas id="snow"></canvas>
 <header class="top">
   <div class="hrow">
@@ -327,6 +389,7 @@ footer{font:11px var(--mono);color:var(--dim);text-align:center;padding:24px}
     <div class="grow"></div>
     <div class="clock"><div class="t" id="hTime">--:--:--</div><div class="d" id="hDate">—</div></div>
     <button class="iconbtn on" id="snowBtn" title="particles on/off">✦</button>
+    <button class="lockbtn" id="lockBtn" title="Lock the vault"><svg viewBox="0 0 24 24"><path d="M7 10V8a5 5 0 0 1 10 0v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 10.5l6 4-6 7-6-7z" fill="currentColor"/></svg></button>
     <div class="mode" id="modeSw">
       <button data-m="paper" class="on">● PAPER</button>
       <button data-m="backtest">BACKTEST</button>
@@ -573,6 +636,7 @@ footer{font:11px var(--mono);color:var(--dim);text-align:center;padding:24px}
 </section>
 <footer>💜 FEBRUARY · paper + Bybit demo / live execution · data: Bybit public API · <span id="ver"></span></footer>
 </main>
+</div><!-- /app -->
 <div class="toast" id="toast"></div><div class="sweep" id="sweep"></div>
 
 <script>
@@ -588,7 +652,9 @@ const cls=v=>v>0?'pos':v<0?'neg':'';
 const pxd=p=>p==null?'—':p>=1000?fmt(p,1):p>=10?fmt(p,2):fmt(p,4);
 const tfmt=ms=>{if(!ms)return'—';const d=new Date(ms);return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})};
 const dur=h=>h==null?'—':h<1?Math.round(h*60)+'m':h<48?fmt(h,1)+'h':fmt(h/24,1)+'d';
-async function api(p,opt){const r=await fetch(p,Object.assign({cache:'no-store'},opt||{}));const j=await r.json();if(!r.ok)throw new Error(j.error||r.status);return j}
+const AUTH={token:null,autolock:10,last:Date.now(),started:false,digits:4};
+async function api(p,opt){if(!AUTH.token)throw new Error('locked');opt=Object.assign({cache:'no-store'},opt||{});opt.headers=Object.assign({},opt.headers||{},{'X-February-Token':AUTH.token});
+  const r=await fetch(p,opt);if(r.status===401){Vault.lock('Session ended');throw new Error('locked')}const j=await r.json();if(!r.ok)throw new Error(j.error||r.status);return j}
 function toast(m,c){const t=$('#toast');t.textContent=m;t.style.borderColor=c||'var(--ice)';t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2600)}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 
@@ -1001,6 +1067,7 @@ $('#lbReset').onclick=()=>{if(!confirm('Reset the halt? February may open new li
 
 /* ---------------- boot */
 function refreshAll(){loadStatus();loadBundle();loadChart();loadLog()}
+function startApp(){if(AUTH.started){refreshAll();return}AUTH.started=true;
 initEq();initChart();sizeOvl();refreshAll();loadOpt();loadLab();loadDemo();watchEvents();
 setInterval(()=>{if(!document.hidden)loadDemo()},15000);
 setInterval(()=>{if(!document.hidden&&S.mode==='paper')watchEvents()},10000);
@@ -1009,6 +1076,123 @@ setInterval(()=>{if(S.mode==='paper')loadBundle()},10000);
 setInterval(()=>{if(S.mode==='paper'&&!document.hidden)loadChart()},15000);
 setInterval(()=>{if(!document.hidden)loadLog()},8000);
 setTimeout(()=>$$('section').forEach(s=>s.classList.add('in')),2500);
+}
+</script>
+<script>
+/* ===================== AMETHYST VAULT =====================
+   Real-time 3D brilliant-cut gem (canvas, painter's algorithm), passcode keypad, server-side check.
+   No dashboard data exists in the page until /api/unlock returns a token (kept in memory only). */
+const Vault=(()=>{
+  const cv=$('#gemfx'),cx=cv.getContext('2d');let W=0,H=0,DPR=1;
+  const st={entry:'',busy:false,charge:0,flash:0,bad:0,shake:0,stone:0,lockLeft:0,lockTotal:0,shatter:null,reform:0,rot:0,tiltX:.42,ptr:{x:0,y:0},pulses:[],motes:[],running:true,gx:0,gy:0,R:100,alive:true};
+  // ---- gem model: brilliant cut (table, crown, girdle, pavilion, culet)
+  const V=[],F=[];const N=8,ang=i=>i*Math.PI*2/N;
+  const ring=(r,y,off)=>{const s=V.length;for(let i=0;i<N;i++)V.push([r*Math.cos(ang(i)+off),y,r*Math.sin(ang(i)+off)]);return s};
+  const T=ring(.52,-.55,0),C=ring(.86,-.36,Math.PI/N),G=ring(1,-.18,0),P=ring(.5,.42,Math.PI/N);V.push([0,1.08,0]);const CU=V.length-1;
+  const m=i=>(i+N)%N;F.push({v:[...Array(N).keys()].map(i=>T+i),k:'table'});
+  for(let i=0;i<N;i++){F.push({v:[T+i,T+m(i+1),C+i],k:'star'});F.push({v:[T+m(i+1),C+i,G+m(i+1),C+m(i+1)],k:'kite'});F.push({v:[C+i,G+i,G+m(i+1)],k:'girdle'});
+    F.push({v:[G+i,G+m(i+1),P+i],k:'pav'});F.push({v:[G+m(i+1),P+i,CU,P+m(i+1)],k:'pav2'})}
+  const sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]],crs=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2],nrm=a=>{const l=Math.hypot(...a)||1;return a.map(x=>x/l)};
+  const L1=nrm([-.5,-.8,.9]),L2=nrm([.8,-.2,.6]);
+  function resize(){DPR=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;
+    const gs=$('#gemSpace').getBoundingClientRect();st.gx=gs.left+gs.width/2;st.gy=gs.top+gs.height/2;st.R=Math.min(gs.height*.42,W*.22,120);
+    if(!st.motes.length)for(let i=0;i<70;i++)st.motes.push({x:Math.random(),y:Math.random(),s:Math.random()*1.6+.3,v:Math.random()*.0006+.0002,p:Math.random()*6.28})}
+  function project(rx,ry,ox,oy,R){const cy=Math.cos(ry),sy=Math.sin(ry),cxr=Math.cos(rx),sxr=Math.sin(rx);
+    return V.map(([x,y,z])=>{let X=x*cy+z*sy,Z=-x*sy+z*cy;let Y=y*cxr-Z*sxr;Z=y*sxr+Z*cxr;const d=3.4/(3.4+Z);return {x:ox+X*R*d,y:oy+Y*R*d,z:Z,w:[X,Y,Z]}})}
+  function faces(P3){const out=[];for(const f of F){const w=f.v.map(i=>P3[i].w);let n=nrm(crs(sub(w[1],w[0]),sub(w[2],w[0])));const c=w.reduce((a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]],[0,0,0]).map(x=>x/w.length);
+      if(dot(n,c)<0)n=n.map(x=>-x);if(n[2]>0.02)continue;out.push({f,n,c,pts:f.v.map(i=>P3[i]),z:c[2]})}out.sort((a,b)=>b.z-a.z);return out}
+  function col(n,k,t){const l=Math.max(0,-dot(n,L1))*.75+Math.max(0,-dot(n,L2))*.35;const spec=Math.pow(Math.max(0,-dot(n,nrm([L1[0],L1[1],L1[2]-1]))),18);
+    const hueShift=k==='table'?8:k.startsWith('pav')?-14:0;let h=276+hueShift+Math.sin(t*.0007+n[0]*3)*8,s=72,L=18+l*42+spec*40+st.charge*10+st.flash*30;
+    if(st.bad>0){h=h*(1-st.bad)+350*st.bad;s=80}if(st.stone>0){s=s*(1-st.stone)+6*st.stone;L=L*(1-st.stone*.35)}
+    return [`hsla(${h},${s}%,${Math.min(92,L)}%,${k==='table'?.92:.86})`,spec+st.flash]}
+  function drawGem(t){const sh=st.shake>0?Math.sin(t*.09)*st.shake*12:0;const ox=st.gx+sh+st.ptr.x*8,oy=st.gy+Math.sin(t*.0012)*5+st.ptr.y*6;
+    const R=st.R*(1+st.charge*.06+st.flash*.08)*(st.reform?Math.min(1,st.reform):1);
+    const P3=project(st.tiltX+st.ptr.y*.25,st.rot+st.ptr.x*.5,ox,oy,R);
+    // glow under the gem
+    const g=cx.createRadialGradient(ox,oy+R*.2,R*.1,ox,oy+R*.2,R*2.6);const gc=st.bad>0?'255,92,122':st.stone>0?'150,150,170':'176,120,255';
+    g.addColorStop(0,`rgba(${gc},${.28+st.charge*.25+st.flash*.4})`);g.addColorStop(1,'rgba(0,0,0,0)');cx.fillStyle=g;cx.fillRect(ox-R*3,oy-R*3,R*6,R*6);
+    const FS=faces(P3);let bright=[];
+    for(const q of FS){const [fill,spec]=col(q.n,q.f.k,t);cx.beginPath();q.pts.forEach((p,i)=>i?cx.lineTo(p.x,p.y):cx.moveTo(p.x,p.y));cx.closePath();cx.fillStyle=fill;cx.fill();
+      cx.strokeStyle=`rgba(255,240,255,${.18+st.charge*.2})`;cx.lineWidth=1;cx.stroke();if(spec>.35)bright.push(q)}
+    // cracks on a wrong code
+    if(st.bad>.05){cx.strokeStyle=`rgba(255,200,210,${st.bad})`;cx.lineWidth=1.4;for(let k=0;k<5;k++){cx.beginPath();let x=ox,y=oy-R*.2;cx.moveTo(x,y);for(let j=0;j<4;j++){x+=Math.cos(k*1.3+j)*R*.22;y+=Math.sin(k*2.1+j*.7)*R*.2;cx.lineTo(x,y)}cx.stroke()}}
+    // sparkles on bright facets
+    for(const q of bright.slice(0,4)){const p=q.pts[0];star(p.x,p.y,6+Math.sin(t*.01+p.x)*3,.9)}
+    st.lastFaces=FS;st.lastO=[ox,oy]}
+  function star(x,y,r,a){cx.save();cx.translate(x,y);cx.globalAlpha=a;cx.fillStyle='#fff';cx.beginPath();for(let i=0;i<8;i++){const rr=i%2?r*.18:r;const an=i*Math.PI/4;cx.lineTo(Math.cos(an)*rr,Math.sin(an)*rr)}cx.closePath();cx.fill();cx.restore()}
+  function drawMotes(t){for(const m of st.motes){m.y-=m.v;if(m.y<-.02){m.y=1.02;m.x=Math.random()}const a=.25+.25*Math.sin(t*.002+m.p);cx.fillStyle=`rgba(225,205,255,${a})`;cx.beginPath();cx.arc(m.x*W,m.y*H,m.s,0,7);cx.fill()}}
+  function drawPulses(){st.pulses=st.pulses.filter(p=>p.a>0.01);for(const p of st.pulses){p.r+=p.v;p.a*=.94;cx.strokeStyle=`rgba(${p.c},${p.a})`;cx.lineWidth=2;cx.beginPath();
+      for(let i=0;i<4;i++){const an=i*Math.PI/2;cx.lineTo(p.x+Math.cos(an)*p.r,p.y+Math.sin(an)*p.r)}cx.closePath();cx.stroke()}}
+  function drawLockRing(){if(st.lockLeft<=0)return;const [ox,oy]=st.lastO||[st.gx,st.gy];const R=st.R*1.55;cx.strokeStyle='rgba(255,255,255,.08)';cx.lineWidth=3;cx.beginPath();cx.arc(ox,oy,R,0,7);cx.stroke();
+    cx.strokeStyle='rgba(255,143,163,.8)';cx.beginPath();cx.arc(ox,oy,R,-Math.PI/2,-Math.PI/2+Math.PI*2*(st.lockLeft/st.lockTotal));cx.stroke()}
+  function drawShatter(t){const S=st.shatter;const k=(t-S.t0)/1000;for(const s of S.shards){s.x+=s.vx;s.y+=s.vy;s.vy+=.12;s.vx*=.99;s.r+=s.vr;const a=Math.max(0,1-k*1.1);if(a<=0)continue;
+      cx.save();cx.translate(s.x,s.y);cx.rotate(s.r);cx.globalAlpha=a;cx.beginPath();s.pts.forEach((p,i)=>i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]));cx.closePath();cx.fillStyle=s.fill;cx.fill();cx.strokeStyle='rgba(255,255,255,.6)';cx.stroke();cx.restore()}
+    return k<1.2}
+  function frame(t){if(!st.running)return;cx.setTransform(DPR,0,0,DPR,0,0);cx.clearRect(0,0,W,H);
+    st.rot+=st.stone>0.5?.0015:.0045+st.charge*.01;st.charge*=.96;st.flash*=.9;st.bad*=.955;st.shake*=.92;if(st.reform&&st.reform<1)st.reform+=.03;
+    st.stone+=((st.lockLeft>0?1:0)-st.stone)*.05;
+    if(!document.body.classList.contains('unlocking'))drawMotes(t);
+    if(st.shatter){if(!drawShatter(t)){st.shatter=null;st.running=false;cx.clearRect(0,0,W,H);return}}
+    else{drawGem(t);drawLockRing()}drawPulses();requestAnimationFrame(frame)}
+  function shatter(){const FS=st.lastFaces||[];const [ox,oy]=st.lastO||[st.gx,st.gy];st.shatter={t0:performance.now(),shards:FS.map(q=>{
+      const c=q.pts.reduce((a,p)=>[a[0]+p.x/q.pts.length,a[1]+p.y/q.pts.length],[0,0]);const dx=c[0]-ox,dy=c[1]-oy,d=Math.hypot(dx,dy)||1,sp=6+Math.random()*9;
+      return {x:c[0],y:c[1],vx:dx/d*sp+(Math.random()-.5)*3,vy:dy/d*sp-4-Math.random()*4,r:0,vr:(Math.random()-.5)*.25,pts:q.pts.map(p=>[p.x-c[0],p.y-c[1]]),fill:col(q.n,q.f.k,performance.now())[0]}})};
+    for(let i=0;i<3;i++)st.pulses.push({x:ox,y:oy,r:st.R*(.6+i*.3),v:9+i*3,a:.9,c:'240,225,255'})}
+  // ---- keypad
+  const LET={2:'ABC',3:'DEF',4:'GHI',5:'JKL',6:'MNO',7:'PQRS',8:'TUV',9:'WXYZ'};
+  const hex='<svg viewBox="0 0 76 76"><polygon points="38,3 70,21 70,55 38,73 6,55 6,21"/></svg>';
+  function buildPad(){const keys=['1','2','3','4','5','6','7','8','9','clr','0','del'];
+    $('#lkPad').innerHTML=keys.map(k=>k==='clr'?`<button class="lk-key fn" data-k="clr" aria-label="clear"><b>CLEAR</b></button>`:k==='del'?`<button class="lk-key fn" data-k="del" aria-label="delete"><b>⌫</b></button>`
+      :`<button class="lk-key" data-k="${k}" aria-label="${k}">${hex}<b>${k}</b><small>${LET[k]||''}</small></button>`).join('');
+    $$('#lkPad .lk-key').forEach(b=>b.addEventListener('pointerdown',e=>{e.preventDefault();press(b.dataset.k,b)}))}
+  function dots(cls){const n=AUTH.digits;$('#lkDots').className='lk-dots'+(cls?' '+cls:'');$('#lkDots').innerHTML=Array.from({length:n},(_,i)=>`<i class="${i<st.entry.length?'on':''}"></i>`).join('')}
+  function msg(t,err){const m=$('#lkMsg');m.textContent=t||'\u00a0';m.className='lk-msg'+(err?' err':'')}
+  function press(k,btn){if(st.busy||st.lockLeft>0||!document.body.classList.contains('is-locked'))return;
+    if(btn){btn.classList.add('hit');setTimeout(()=>btn.classList.remove('hit'),160)}
+    if(k==='del'){st.entry=st.entry.slice(0,-1);dots();return}if(k==='clr'){st.entry='';dots();return}
+    if(st.entry.length>=8)return;st.entry+=k;st.charge=Math.min(1,st.charge+.45);st.flash=.5;
+    st.pulses.push({x:st.lastO?st.lastO[0]:st.gx,y:st.lastO?st.lastO[1]:st.gy,r:st.R*.7,v:4,a:.6,c:'199,155,255'});dots();
+    if(st.entry.length===AUTH.digits)setTimeout(submit,120)}
+  async function submit(){st.busy=true;let r,j;try{r=await fetch('api/unlock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:st.entry}),cache:'no-store'});j=await r.json()}
+    catch(e){st.busy=false;st.entry='';dots();msg('FEBRUARY is not reachable',true);return}
+    if(r.ok&&j.token){AUTH.token=j.token;AUTH.autolock=j.autolock_min||10;AUTH.last=Date.now();dots('ok');msg('');reveal();return}
+    st.bad=1;st.shake=1;dots('bad');setTimeout(()=>{st.entry='';dots();st.busy=false},560);
+    if(j.wait>0)lockout(j.wait,j.attempts);else{const left=6-(j.attempts||0);msg(left>0&&left<=3?`Wrong passcode · ${left} ${left===1?'try':'tries'} before the vault seals`:'Wrong passcode',true)}}
+  function lockout(sec,att){st.lockTotal=sec;st.lockLeft=sec;$('#lkPad').classList.add('off');$('#lkState').textContent='◆ SEALED SHUT';
+    const tm=setInterval(()=>{st.lockLeft-=1;if(st.lockLeft<=0){clearInterval(tm);st.lockLeft=0;$('#lkPad').classList.remove('off');$('#lkState').textContent='◆ SEALED';msg('Enter passcode');return}
+      const m=Math.floor(st.lockLeft/60),s=st.lockLeft%60;msg(`vault sealed · try again in ${m?m+' min ':''}${s} s${att?' · '+att+' wrong attempts':''}`,true)},1000)}
+  // ---- reveal / lock
+  function diamond(el,cx0,cy0,r){el.style.clipPath=`polygon(${cx0}px ${cy0-r}px, ${cx0+r}px ${cy0}px, ${cx0}px ${cy0+r}px, ${cx0-r}px ${cy0}px)`}
+  function reveal(){const app=$('#app');const [ox,oy]=st.lastO||[st.gx,st.gy];shatter();document.body.classList.add('unlocking');document.body.classList.remove('is-locked');
+    $('#lkState').textContent='◆ OPEN';const max=(W+H)*1.05;const t0=performance.now();diamond(app,ox,oy+scrollY,0);
+    startApp();
+    const step=t=>{const k=Math.min(1,(t-t0)/1350),e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;diamond(app,ox,oy+scrollY,max*e);if(k<1)requestAnimationFrame(step);else{app.style.clipPath='';document.body.classList.remove('unlocking');st.busy=false;st.entry=''}};
+    requestAnimationFrame(step)}
+  function lock(reason){if(document.body.classList.contains('is-locked'))return;const t=AUTH.token;AUTH.token=null;
+    if(t)fetch('api/lock',{method:'POST',headers:{'X-February-Token':t}}).catch(()=>{});
+    const app=$('#app');const ox=innerWidth/2,oy=innerHeight*.38+scrollY;const max=(innerWidth+innerHeight)*1.05;const t0=performance.now();
+    try{sessionStorage.setItem('febLockMsg',reason||'')}catch(e){}
+    const step=tt=>{const k=Math.min(1,(tt-t0)/650),e=k*k;diamond(app,ox,oy,max*(1-e));app.style.filter=`saturate(${1-e}) brightness(${1-e*.6})`;if(k<1)requestAnimationFrame(step);else location.reload()};
+    requestAnimationFrame(step)}
+  // ---- clock, input, autolock
+  function clock(){const d=new Date();$('#lkTime').textContent=d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    $('#lkDate').textContent=d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}
+  addEventListener('keydown',e=>{if(!document.body.classList.contains('is-locked'))return;if(/^[0-9]$/.test(e.key)){press(e.key,$(`#lkPad [data-k="${e.key}"]`))}
+    else if(e.key==='Backspace')press('del',$('#lkPad [data-k="del"]'));else if(e.key==='Escape')press('clr')});
+  addEventListener('pointermove',e=>{if(!document.body.classList.contains('is-locked'))return;st.ptr.x=(e.clientX/innerWidth-.5);st.ptr.y=(e.clientY/innerHeight-.5)},{passive:true});
+  addEventListener('deviceorientation',e=>{if(e.gamma==null)return;st.ptr.x=Math.max(-.5,Math.min(.5,e.gamma/60));st.ptr.y=Math.max(-.5,Math.min(.5,(e.beta-45)/90))});
+  ['pointerdown','keydown','wheel','touchstart','scroll'].forEach(ev=>addEventListener(ev,()=>{AUTH.last=Date.now()},{passive:true}));
+  setInterval(()=>{if(AUTH.token&&Date.now()-AUTH.last>AUTH.autolock*60000)lock('Locked after inactivity')},10000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&AUTH.token&&Date.now()-AUTH.last>AUTH.autolock*60000)lock('Locked after inactivity')});
+  addEventListener('resize',resize);
+  // ---- boot
+  buildPad();resize();clock();setInterval(clock,1000);st.reform=.01;requestAnimationFrame(frame);
+  try{const m=sessionStorage.getItem('febLockMsg');if(m){msg(m);sessionStorage.removeItem('febLockMsg')}}catch(e){}
+  fetch('api/auth/status',{cache:'no-store'}).then(r=>r.json()).then(j=>{AUTH.digits=j.digits||4;AUTH.autolock=j.autolock_min||10;dots();if(j.wait>0)lockout(j.wait,j.attempts)}).catch(()=>{dots();msg('FEBRUARY is not reachable',true)});
+  dots();
+  return {lock}
+})();
+$('#lockBtn').onclick=()=>Vault.lock('');
 </script>
 </body>
 </html>

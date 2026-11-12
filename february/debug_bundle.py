@@ -83,6 +83,8 @@ def clean_config():
             d[k] = "<set>" if v.strip() else "<empty>"
     if isinstance(cfg.get("web"), dict) and cfg["web"].get("password"):
         cfg["web"]["password"] = "<set>"
+    if isinstance(cfg.get("web"), dict) and cfg["web"].get("passcode"):
+        cfg["web"]["passcode"] = "<set>"
     for blk in ("demo", "live"):
         dm = cfg.get(blk)
         if isinstance(dm, dict):
